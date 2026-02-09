@@ -1,0 +1,29 @@
+.netctrl-console {
+  max-width: 960px;
+}
+
+.netctrl-panel {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.netctrl-entry-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.netctrl-entry-form input {
+  width: 100%;
+}
+
+#netctrl-entries li,
+#netctrl-sessions li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
