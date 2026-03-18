@@ -74,6 +74,32 @@ function netctrl_register_routes()
         ),
     ));
 
+    register_rest_route('netctrl/v1', '/entries/(?P<id>\d+)', array(
+        array(
+            'methods' => WP_REST_Server::EDITABLE,
+            'callback' => 'netctrl_rest_update_entry',
+            'permission_callback' => 'netctrl_rest_require_auth',
+            'args' => array(
+                'callsign' => array(
+                    'required' => true,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'name' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'location' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'comments' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_textarea_field',
+                ),
+            ),
+        ),
+    ));
+
     register_rest_route('netctrl/v1', '/sessions/(?P<id>\d+)/pdf', array(
         array(
             'methods' => WP_REST_Server::READABLE,
@@ -132,8 +158,36 @@ function netctrl_rest_list_entries(WP_REST_Request $request)
 function netctrl_rest_create_entry(WP_REST_Request $request)
 {
     $session_id = (int) $request['id'];
-    $callsign = $request->get_param('callsign');
+    $entry = netctrl_rest_prepare_entry_payload($request);
+    $entry_id = netctrl_add_entry($session_id, $entry);
 
+    return rest_ensure_response(array(
+        'id' => $entry_id,
+        'entry' => netctrl_get_entry($entry_id),
+    ));
+}
+
+function netctrl_rest_update_entry(WP_REST_Request $request)
+{
+    $entry_id = (int) $request['id'];
+    $existing_entry = netctrl_get_entry($entry_id);
+
+    if (!$existing_entry) {
+        return new WP_Error('netctrl_not_found', __('Entry not found.', 'netctrl'), array('status' => 404));
+    }
+
+    $entry = netctrl_rest_prepare_entry_payload($request);
+    netctrl_update_entry($entry_id, $entry);
+
+    return rest_ensure_response(array(
+        'id' => $entry_id,
+        'entry' => netctrl_get_entry($entry_id),
+    ));
+}
+
+function netctrl_rest_prepare_entry_payload(WP_REST_Request $request)
+{
+    $callsign = $request->get_param('callsign');
     $entry = array(
         'callsign' => $callsign,
         'name' => $request->get_param('name'),
@@ -153,12 +207,7 @@ function netctrl_rest_create_entry(WP_REST_Request $request)
         }
     }
 
-    $entry_id = netctrl_add_entry($session_id, $entry);
-
-    return rest_ensure_response(array(
-        'id' => $entry_id,
-        'entry' => $entry,
-    ));
+    return $entry;
 }
 
 function netctrl_rest_download_pdf(WP_REST_Request $request)

@@ -45,6 +45,12 @@ function netctrl_enqueue_console_assets()
             'activeSessionLabel' => __('Current session:', 'netctrl'),
             'noRecentSessions' => __('No recent sessions found.', 'netctrl'),
             'noEntries' => __('No entries recorded yet.', 'netctrl'),
+            'sessionPreviewLabel' => __('Session name preview:', 'netctrl'),
+            'sessionPreviewFallback' => __('Choose a session type to generate the session name.', 'netctrl'),
+            'specialEventLabel' => __('Event Description', 'netctrl'),
+            'editEntry' => __('Edit entry', 'netctrl'),
+            'saveEntry' => __('Save', 'netctrl'),
+            'cancelEdit' => __('Cancel', 'netctrl'),
         ),
     ));
 }
@@ -68,8 +74,50 @@ function netctrl_get_console_markup($is_frontend = false)
         <section class="netctrl-panel netctrl-panel--session-start">
             <h2><?php esc_html_e('Start a Session', 'netctrl'); ?></h2>
             <div class="netctrl-panel__body netctrl-panel__body--stacked">
-                <label for="netctrl-net-name"><?php esc_html_e('Net name', 'netctrl'); ?></label>
-                <input type="text" id="netctrl-net-name" />
+                <div class="netctrl-session-builder">
+                    <div class="netctrl-session-builder__group">
+                        <label for="netctrl-session-date"><?php esc_html_e('Date', 'netctrl'); ?></label>
+                        <input type="text" id="netctrl-session-date" readonly />
+                    </div>
+
+                    <fieldset class="netctrl-session-builder__group netctrl-session-builder__group--types">
+                        <legend><?php esc_html_e('Session Type', 'netctrl'); ?></legend>
+                        <div class="netctrl-session-types" role="radiogroup" aria-label="<?php echo esc_attr__('Session Type', 'netctrl'); ?>">
+                            <?php
+                            $session_types = array(
+                                'CN' => __('Club Net', 'netctrl'),
+                                'SW' => __('SkyWarn Activation', 'netctrl'),
+                                'AR' => __('ARES Net', 'netctrl'),
+                                'AX' => __('AUXCOMM Net', 'netctrl'),
+                                'SE' => __('Special Event', 'netctrl'),
+                            );
+
+                            foreach ($session_types as $code => $label) :
+                                ?>
+                                <label class="netctrl-session-types__option" for="netctrl-session-type-<?php echo esc_attr(strtolower($code)); ?>">
+                                    <input
+                                        type="radio"
+                                        name="netctrl-session-type"
+                                        id="netctrl-session-type-<?php echo esc_attr(strtolower($code)); ?>"
+                                        value="<?php echo esc_attr($code); ?>"
+                                    />
+                                    <span><?php echo esc_html($code . ' = ' . $label); ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </fieldset>
+
+                    <div class="netctrl-session-builder__group" data-netctrl-special-event hidden>
+                        <label for="netctrl-event-description"><?php esc_html_e('Event Description', 'netctrl'); ?></label>
+                        <input type="text" id="netctrl-event-description" maxlength="190" />
+                    </div>
+
+                    <div class="netctrl-session-builder__group">
+                        <label for="netctrl-session-preview"><?php esc_html_e('Session Name Preview', 'netctrl'); ?></label>
+                        <input type="text" id="netctrl-session-preview" readonly />
+                    </div>
+                </div>
+
                 <button type="button" class="button button-primary" id="netctrl-start-session">
                     <?php esc_html_e('Start Session', 'netctrl'); ?>
                 </button>
@@ -82,7 +130,7 @@ function netctrl_get_console_markup($is_frontend = false)
                 <div id="netctrl-active-session" class="netctrl-active-session">
                     <?php esc_html_e('Select or start a session to begin logging.', 'netctrl'); ?>
                 </div>
-                <div class="netctrl-entry-form">
+                <div class="netctrl-entry-form" role="group" aria-label="<?php echo esc_attr__('Entry form', 'netctrl'); ?>">
                     <input type="text" id="netctrl-callsign" placeholder="<?php echo esc_attr__('Callsign', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-name" placeholder="<?php echo esc_attr__('Name', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-location" placeholder="<?php echo esc_attr__('Location', 'netctrl'); ?>" />
@@ -92,7 +140,18 @@ function netctrl_get_console_markup($is_frontend = false)
                 </div>
                 <div class="netctrl-panel__subsection">
                     <h3><?php esc_html_e('Entries', 'netctrl'); ?></h3>
-                    <ul id="netctrl-entries" class="netctrl-list"></ul>
+                    <div class="netctrl-entries-table" role="table" aria-label="<?php echo esc_attr__('Session entries', 'netctrl'); ?>">
+                        <div class="netctrl-entries-table__head" role="rowgroup">
+                            <div class="netctrl-entries-table__row netctrl-entries-table__row--header" role="row">
+                                <div role="columnheader"><?php esc_html_e('Callsign', 'netctrl'); ?></div>
+                                <div role="columnheader"><?php esc_html_e('Name', 'netctrl'); ?></div>
+                                <div role="columnheader"><?php esc_html_e('Location', 'netctrl'); ?></div>
+                                <div role="columnheader"><?php esc_html_e('Comments', 'netctrl'); ?></div>
+                                <div role="columnheader"><?php esc_html_e('Actions', 'netctrl'); ?></div>
+                            </div>
+                        </div>
+                        <ul id="netctrl-entries" class="netctrl-list netctrl-entries-table__body" role="rowgroup"></ul>
+                    </div>
                 </div>
             </div>
         </section>
