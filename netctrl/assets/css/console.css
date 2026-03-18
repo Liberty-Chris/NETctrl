@@ -70,7 +70,7 @@
   margin-bottom: 1rem;
   box-shadow: 0 4px 14px rgba(29, 35, 39, 0.05);
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .netctrl-panel *,
@@ -187,12 +187,16 @@
 
 .netctrl-entry-form {
   display: grid;
-  grid-template-columns: minmax(110px, 0.9fr) minmax(130px, 1fr) minmax(130px, 1fr) minmax(220px, 2fr) auto;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(240px, 2fr);
   gap: 0.75rem;
-  margin: 0;
-  align-items: stretch;
-  min-width: 0;
   width: 100%;
+}
+
+.netctrl-entry-form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }
 
 .netctrl-entry-form input,
@@ -269,14 +273,7 @@
 }
 
 .netctrl-entries-table__row {
-  display: grid;
-  grid-template-columns: minmax(100px, 0.95fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(240px, 2.2fr) minmax(152px, 152px);
-  gap: 0.75rem;
-  align-items: start;
-  padding: 0.8rem 0.95rem;
-  border-bottom: 1px solid #eee;
-  min-width: 0;
-  width: 100%;
+  grid-template-columns: minmax(100px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(240px, 2fr) minmax(180px, auto);
 }
 
 .netctrl-entries-table__row--header {
@@ -297,10 +294,8 @@
 }
 
 .netctrl-entries-table__cell--actions {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  min-width: 152px;
+  min-width: 180px;
+  overflow: visible;
 }
 
 .netctrl-entry-action {
@@ -324,10 +319,13 @@
 
 .netctrl-entries-table__row--editing {
   align-items: stretch;
+  overflow: visible;
 }
 
 .netctrl-entries-table__row--editing input {
   min-height: 38px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .netctrl-entries-table__row--editing .netctrl-entries-table__cell--actions {
