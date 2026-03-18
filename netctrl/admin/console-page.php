@@ -65,35 +65,43 @@ function netctrl_get_console_markup($is_frontend = false)
     <div class="netctrl-console<?php echo $is_frontend ? ' netctrl-console--frontend' : ''; ?>" data-netctrl-console-root>
         <div class="netctrl-console__messages" aria-live="polite"></div>
 
-        <section class="netctrl-panel">
+        <section class="netctrl-panel netctrl-panel--session-start">
             <h2><?php esc_html_e('Start a Session', 'netctrl'); ?></h2>
-            <label for="netctrl-net-name"><?php esc_html_e('Net name', 'netctrl'); ?></label>
-            <input type="text" id="netctrl-net-name" />
-            <button type="button" class="button button-primary" id="netctrl-start-session">
-                <?php esc_html_e('Start Session', 'netctrl'); ?>
-            </button>
+            <div class="netctrl-panel__body netctrl-panel__body--stacked">
+                <label for="netctrl-net-name"><?php esc_html_e('Net name', 'netctrl'); ?></label>
+                <input type="text" id="netctrl-net-name" />
+                <button type="button" class="button button-primary" id="netctrl-start-session">
+                    <?php esc_html_e('Start Session', 'netctrl'); ?>
+                </button>
+            </div>
         </section>
 
-        <section class="netctrl-panel">
+        <section class="netctrl-panel netctrl-panel--active-session">
             <h2><?php esc_html_e('Active Session', 'netctrl'); ?></h2>
-            <div id="netctrl-active-session" class="netctrl-active-session">
-                <?php esc_html_e('Select or start a session to begin logging.', 'netctrl'); ?>
+            <div class="netctrl-panel__body">
+                <div id="netctrl-active-session" class="netctrl-active-session">
+                    <?php esc_html_e('Select or start a session to begin logging.', 'netctrl'); ?>
+                </div>
+                <div class="netctrl-entry-form">
+                    <input type="text" id="netctrl-callsign" placeholder="<?php echo esc_attr__('Callsign', 'netctrl'); ?>" />
+                    <input type="text" id="netctrl-name" placeholder="<?php echo esc_attr__('Name', 'netctrl'); ?>" />
+                    <input type="text" id="netctrl-location" placeholder="<?php echo esc_attr__('Location', 'netctrl'); ?>" />
+                    <input type="text" id="netctrl-comments" placeholder="<?php echo esc_attr__('Comments', 'netctrl'); ?>" />
+                    <button type="button" class="button" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
+                    <button type="button" class="button" id="netctrl-close-session"><?php esc_html_e('Close Session', 'netctrl'); ?></button>
+                </div>
+                <div class="netctrl-panel__subsection">
+                    <h3><?php esc_html_e('Entries', 'netctrl'); ?></h3>
+                    <ul id="netctrl-entries" class="netctrl-list"></ul>
+                </div>
             </div>
-            <div class="netctrl-entry-form">
-                <input type="text" id="netctrl-callsign" placeholder="<?php echo esc_attr__('Callsign', 'netctrl'); ?>" />
-                <input type="text" id="netctrl-name" placeholder="<?php echo esc_attr__('Name', 'netctrl'); ?>" />
-                <input type="text" id="netctrl-location" placeholder="<?php echo esc_attr__('Location', 'netctrl'); ?>" />
-                <input type="text" id="netctrl-comments" placeholder="<?php echo esc_attr__('Comments', 'netctrl'); ?>" />
-                <button type="button" class="button" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
-                <button type="button" class="button" id="netctrl-close-session"><?php esc_html_e('Close Session', 'netctrl'); ?></button>
-            </div>
-            <h3><?php esc_html_e('Entries', 'netctrl'); ?></h3>
-            <ul id="netctrl-entries" class="netctrl-list"></ul>
         </section>
 
-        <section class="netctrl-panel">
+        <section class="netctrl-panel netctrl-panel--recent-sessions">
             <h2><?php esc_html_e('Recent Sessions', 'netctrl'); ?></h2>
-            <ul id="netctrl-sessions" class="netctrl-list"></ul>
+            <div class="netctrl-panel__body">
+                <ul id="netctrl-sessions" class="netctrl-list"></ul>
+            </div>
         </section>
     </div>
     <?php
@@ -116,21 +124,37 @@ function netctrl_render_console_page()
 
 function netctrl_render_console_shortcode()
 {
+    $frontend_wrapper_class = 'netctrl-console-frontend';
+
     if (!is_user_logged_in()) {
+        $redirect_url = get_permalink();
+
+        if (!$redirect_url) {
+            $redirect_url = home_url(add_query_arg(array(), $GLOBALS['wp']->request ?? ''));
+        }
+
         return sprintf(
-            '<div class="netctrl-console-message netctrl-console-message--notice">%s</div>',
-            esc_html__('You must log in to access NETctrl.', 'netctrl')
+            '<div class="%1$s"><div class="netctrl-console-message netctrl-console-message--notice"><p>%2$s</p><a class="button button-primary netctrl-login-button" href="%3$s">%4$s</a></div></div>',
+            esc_attr($frontend_wrapper_class),
+            esc_html__('You must log in to access NETctrl.', 'netctrl'),
+            esc_url(wp_login_url($redirect_url)),
+            esc_html__('Log In', 'netctrl')
         );
     }
 
     if (!current_user_can('run_net')) {
         return sprintf(
-            '<div class="netctrl-console-message netctrl-console-message--error">%s</div>',
+            '<div class="%1$s"><div class="netctrl-console-message netctrl-console-message--error">%2$s</div></div>',
+            esc_attr($frontend_wrapper_class),
             esc_html__('Access denied. Your account is not permitted to use NETctrl.', 'netctrl')
         );
     }
 
     netctrl_enqueue_console_assets();
 
-    return netctrl_get_console_markup(true);
+    return sprintf(
+        '<div class="%1$s">%2$s</div>',
+        esc_attr($frontend_wrapper_class),
+        netctrl_get_console_markup(true)
+    );
 }
