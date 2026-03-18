@@ -195,7 +195,7 @@
       button.className = 'button button-small netctrl-entry-action netctrl-entry-action--edit';
       button.setAttribute('aria-label', `${strings.editEntry}: ${entry.callsign}`);
       button.title = strings.editEntry;
-      button.textContent = '✏️';
+      button.textContent = strings.editEntry;
       button.addEventListener('click', () => {
         editingEntryId = entry.id;
         renderEntries(currentEntries);
@@ -230,7 +230,7 @@
       button.className = 'button button-small netctrl-entry-action netctrl-entry-action--delete';
       button.setAttribute('aria-label', `${strings.deleteEntry}: ${entry.callsign}`);
       button.title = strings.deleteEntry;
-      button.textContent = '🗑️';
+      button.textContent = strings.deleteEntry;
       button.addEventListener('click', () => {
         deleteEntry(entry);
       });
@@ -264,7 +264,7 @@
 
       const saveButton = document.createElement('button');
       saveButton.type = 'button';
-      saveButton.className = 'button button-small';
+      saveButton.className = 'button button-small button-primary';
       saveButton.textContent = strings.saveEntry;
 
       const cancelButton = document.createElement('button');
