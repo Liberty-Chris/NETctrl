@@ -47,8 +47,10 @@ function netctrl_enqueue_console_assets()
             'noEntries' => __('No entries recorded yet.', 'netctrl'),
             'sessionPreviewLabel' => __('Session name preview:', 'netctrl'),
             'sessionPreviewFallback' => __('Choose a session type to generate the session name.', 'netctrl'),
-            'specialEventLabel' => __('Event Description', 'netctrl'),
+            'specialEventLabel' => __('Event Description (optional)', 'netctrl'),
             'editEntry' => __('Edit entry', 'netctrl'),
+            'deleteEntry' => __('Delete entry', 'netctrl'),
+            'deleteEntryConfirm' => __('Delete this entry?', 'netctrl'),
             'saveEntry' => __('Save', 'netctrl'),
             'cancelEdit' => __('Cancel', 'netctrl'),
         ),
@@ -72,7 +74,7 @@ function netctrl_get_console_markup($is_frontend = false)
         <div class="netctrl-console__messages" aria-live="polite"></div>
 
         <section class="netctrl-panel netctrl-panel--session-start">
-            <h2><?php esc_html_e('Start a Session', 'netctrl'); ?></h2>
+            <h2><?php esc_html_e('New Session', 'netctrl'); ?></h2>
             <div class="netctrl-panel__body netctrl-panel__body--stacked">
                 <div class="netctrl-session-builder">
                     <div class="netctrl-session-builder__group">
@@ -108,7 +110,7 @@ function netctrl_get_console_markup($is_frontend = false)
                     </fieldset>
 
                     <div class="netctrl-session-builder__group" data-netctrl-special-event hidden>
-                        <label for="netctrl-event-description"><?php esc_html_e('Event Description', 'netctrl'); ?></label>
+                        <label for="netctrl-event-description"><?php esc_html_e('Event Description (optional)', 'netctrl'); ?></label>
                         <input type="text" id="netctrl-event-description" maxlength="190" />
                     </div>
 

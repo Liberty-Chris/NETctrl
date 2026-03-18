@@ -12,6 +12,8 @@
     noEntries: 'No entries recorded yet.',
     sessionPreviewFallback: 'Choose a session type to generate the session name.',
     editEntry: 'Edit entry',
+    deleteEntry: 'Delete entry',
+    deleteEntryConfirm: 'Delete this entry?',
     saveEntry: 'Save',
     cancelEdit: 'Cancel',
     ...(config.strings || {}),
@@ -91,6 +93,7 @@
 
     let activeSessionId = null;
     let editingEntryId = null;
+    let userDismissedActiveSession = false;
     const today = formatSessionDate(new Date());
 
     sessionDateInput.value = today;
@@ -189,13 +192,47 @@
     const createEditButton = (entry) => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'button button-small netctrl-entry-action';
+      button.className = 'button button-small netctrl-entry-action netctrl-entry-action--edit';
       button.setAttribute('aria-label', `${strings.editEntry}: ${entry.callsign}`);
       button.title = strings.editEntry;
       button.textContent = '✏️';
       button.addEventListener('click', () => {
         editingEntryId = entry.id;
         renderEntries(currentEntries);
+      });
+      return button;
+    };
+
+    const deleteEntry = async (entry) => {
+      if (!window.confirm(strings.deleteEntryConfirm)) {
+        return;
+      }
+
+      try {
+        setMessage('');
+        await fetchJson(`${restUrl}/entries/${entry.id}`, {
+          method: 'DELETE',
+        });
+
+        if (editingEntryId === entry.id) {
+          editingEntryId = null;
+        }
+
+        await loadEntries(activeSessionId);
+      } catch (error) {
+        setMessage(error.message || strings.requestFailed, 'error');
+      }
+    };
+
+    const createDeleteButton = (entry) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button button-small netctrl-entry-action netctrl-entry-action--delete';
+      button.setAttribute('aria-label', `${strings.deleteEntry}: ${entry.callsign}`);
+      button.title = strings.deleteEntry;
+      button.textContent = '🗑️';
+      button.addEventListener('click', () => {
+        deleteEntry(entry);
       });
       return button;
     };
@@ -317,12 +354,17 @@
         row.className = 'netctrl-entries-table__row';
         row.setAttribute('role', 'row');
         row.dataset.entryId = entry.id;
+        const actions = document.createElement('div');
+        actions.className = 'netctrl-entry-actions';
+
+        actions.appendChild(createEditButton(entry));
+        actions.appendChild(createDeleteButton(entry));
 
         row.appendChild(createCell(entry.callsign));
         row.appendChild(createCell(entry.name));
         row.appendChild(createCell(entry.location));
         row.appendChild(createCell(entry.comments));
-        row.appendChild(createCell(createEditButton(entry), 'netctrl-entries-table__cell--actions'));
+        row.appendChild(createCell(actions, 'netctrl-entries-table__cell--actions'));
         entriesList.appendChild(row);
       });
     };
@@ -349,20 +391,32 @@
 
     const setActiveSession = async (session) => {
       activeSessionId = session.id;
+      userDismissedActiveSession = false;
       editingEntryId = null;
       updateActiveSessionText(session);
       await loadEntries(activeSessionId);
     };
 
+    const resetActiveSession = () => {
+      activeSessionId = null;
+      editingEntryId = null;
+      userDismissedActiveSession = true;
+      clearEntryInputs();
+      updateActiveSessionText(null);
+      renderEntries([]);
+    };
+
     const loadSessions = async () => {
       const sessions = await fetchJson(`${restUrl}/sessions`);
       renderSessions(sessions);
+      const selectedSession = activeSessionId ? sessions.find((session) => session.id === activeSessionId) : null;
 
-      const active = sessions.find((session) => session.status === 'open');
-      if (active) {
-        await setActiveSession(active);
-      } else {
-        activeSessionId = null;
+      if (selectedSession) {
+        await setActiveSession(selectedSession);
+        return;
+      }
+
+      if (!userDismissedActiveSession) {
         updateActiveSessionText(null);
         renderEntries([]);
       }
@@ -390,8 +444,8 @@
         refreshSessionPreview();
 
         if (data.session) {
-          await loadSessions();
           await setActiveSession(data.session);
+          await loadSessions();
         }
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
@@ -467,9 +521,7 @@
           method: 'POST',
         });
 
-        activeSessionId = null;
-        editingEntryId = null;
-        updateActiveSessionText(null);
+        resetActiveSession();
         await loadSessions();
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');

@@ -148,6 +148,18 @@ function netctrl_update_entry($entry_id, array $entry)
     );
 }
 
+function netctrl_delete_entry($entry_id)
+{
+    global $wpdb;
+    $table = netctrl_get_table('entries');
+
+    return $wpdb->delete(
+        $table,
+        array('id' => $entry_id),
+        array('%d')
+    );
+}
+
 function netctrl_get_entry($entry_id)
 {
     global $wpdb;

@@ -98,6 +98,11 @@ function netctrl_register_routes()
                 ),
             ),
         ),
+        array(
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => 'netctrl_rest_delete_entry',
+            'permission_callback' => 'netctrl_rest_require_auth',
+        ),
     ));
 
     register_rest_route('netctrl/v1', '/sessions/(?P<id>\d+)/pdf', array(
@@ -182,6 +187,24 @@ function netctrl_rest_update_entry(WP_REST_Request $request)
     return rest_ensure_response(array(
         'id' => $entry_id,
         'entry' => netctrl_get_entry($entry_id),
+    ));
+}
+
+function netctrl_rest_delete_entry(WP_REST_Request $request)
+{
+    $entry_id = (int) $request['id'];
+    $existing_entry = netctrl_get_entry($entry_id);
+
+    if (!$existing_entry) {
+        return new WP_Error('netctrl_not_found', __('Entry not found.', 'netctrl'), array('status' => 404));
+    }
+
+    netctrl_delete_entry($entry_id);
+
+    return rest_ensure_response(array(
+        'deleted' => true,
+        'id' => $entry_id,
+        'session_id' => (int) $existing_entry['session_id'],
     ));
 }
 

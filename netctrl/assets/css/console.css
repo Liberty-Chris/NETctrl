@@ -3,8 +3,8 @@
 }
 
 .netctrl-console-frontend {
-  max-width: 1240px;
-  margin: 2rem auto;
+  max-width: 1200px;
+  margin: 1.5rem auto;
   padding: 0 1rem;
 }
 
@@ -42,8 +42,9 @@
 
 .netctrl-console__messages {
   min-height: 1.5rem;
-  margin-bottom: 12px;
+  margin-bottom: 0.75rem;
   font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .netctrl-console__messages--error {
@@ -54,25 +55,42 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 40px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  line-height: 1.2;
 }
 
 .netctrl-panel {
   background: #fff;
   border: 1px solid #ccd0d4;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-  box-shadow: 0 6px 18px rgba(29, 35, 39, 0.06);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 14px rgba(29, 35, 39, 0.05);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .netctrl-panel h2,
 .netctrl-panel h3 {
   margin-top: 0;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.netctrl-panel h2 {
+  font-size: 1.25rem;
+}
+
+.netctrl-panel h3 {
+  font-size: 1rem;
 }
 
 .netctrl-panel__body {
   display: grid;
-  gap: 1rem;
+  gap: 0.9rem;
+  min-width: 0;
 }
 
 .netctrl-panel__body--stacked {
@@ -87,18 +105,24 @@
 .netctrl-panel label,
 .netctrl-panel legend {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 0.4rem;
   font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .netctrl-panel input {
   width: 100%;
   max-width: 100%;
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .netctrl-active-session {
   margin-bottom: 0;
   font-weight: 600;
+  min-width: 0;
 }
 
 .netctrl-session-builder {
@@ -115,13 +139,13 @@
   margin: 0;
   border: 1px solid #dcdcde;
   border-radius: 10px;
-  padding: 1rem;
+  padding: 0.9rem;
 }
 
 .netctrl-session-types {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem;
 }
 
 .netctrl-session-types__option {
@@ -129,16 +153,24 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  padding: 0.75rem 0.875rem;
+  padding: 0.7rem 0.8rem;
   border: 1px solid #dcdcde;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #f6f7f7;
   cursor: pointer;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .netctrl-session-types__option input {
   width: auto;
   margin: 0;
+}
+
+.netctrl-session-types__option span {
+  min-width: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
 }
 
 .netctrl-session-types__option.is-selected {
@@ -148,11 +180,13 @@
 
 .netctrl-entry-form {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(220px, 2fr) auto auto;
-  gap: 10px;
-  margin-top: 12px;
-  margin-bottom: 12px;
+  grid-template-columns: minmax(100px, 1.1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(180px, 1.6fr) auto auto;
+  gap: 0.65rem;
+  margin: 0;
   align-items: stretch;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .netctrl-entry-form input,
@@ -168,8 +202,10 @@
   min-width: 0;
 }
 
-.netctrl-entry-form #netctrl-add-entry {
+.netctrl-entry-form #netctrl-add-entry,
+.netctrl-entry-form #netctrl-close-session {
   white-space: nowrap;
+  min-width: 0;
 }
 
 .netctrl-list {
@@ -181,7 +217,7 @@
 .netctrl-list__item,
 .netctrl-list__empty,
 #netctrl-sessions li {
-  padding: 10px 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid #eee;
 }
 
@@ -189,10 +225,18 @@
   cursor: pointer;
 }
 
+.netctrl-list__empty {
+  padding: 1rem;
+  color: #50575e;
+}
+
 .netctrl-entries-table {
   border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .netctrl-entries-table__head {
@@ -201,11 +245,13 @@
 
 .netctrl-entries-table__row {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(180px, 2fr) minmax(90px, auto);
-  gap: 12px;
+  grid-template-columns: minmax(100px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(180px, 1.7fr) minmax(112px, auto);
+  gap: 0.75rem;
   align-items: center;
-  padding: 12px 14px;
+  padding: 0.8rem 0.95rem;
   border-bottom: 1px solid #eee;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .netctrl-entries-table__row--header {
@@ -220,27 +266,42 @@
 .netctrl-entries-table__cell {
   min-width: 0;
   word-break: break-word;
+  font-size: 0.95rem;
 }
 
 .netctrl-entries-table__cell--actions {
   display: flex;
   justify-content: flex-start;
+  align-items: center;
 }
 
 .netctrl-entry-action {
-  min-width: 40px;
+  min-width: 36px;
   min-height: 36px;
-  padding: 0 10px;
+  padding: 0.4rem 0.55rem;
+}
+
+.netctrl-entry-action--delete {
+  color: #b32d2e;
 }
 
 .netctrl-entry-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  align-items: center;
 }
 
 .netctrl-entries-table__row--editing input {
   min-height: 38px;
+}
+
+.netctrl-panel--active-session .netctrl-panel__subsection,
+.netctrl-entries-table__body,
+.netctrl-entries-table__head,
+.netctrl-entries-table__cell--actions,
+.netctrl-entries-table__row--header > div {
+  min-width: 0;
 }
 
 @media (max-width: 1080px) {
@@ -256,6 +317,11 @@
   .netctrl-entries-table__row,
   .netctrl-entries-table__row--header {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .netctrl-entry-form #netctrl-add-entry,
+  .netctrl-entry-form #netctrl-close-session {
+    width: 100%;
   }
 }
 
