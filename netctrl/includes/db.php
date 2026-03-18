@@ -129,13 +129,43 @@ function netctrl_add_entry($session_id, array $entry)
     return $wpdb->insert_id;
 }
 
+function netctrl_update_entry($entry_id, array $entry)
+{
+    global $wpdb;
+    $table = netctrl_get_table('entries');
+
+    return $wpdb->update(
+        $table,
+        array(
+            'callsign' => $entry['callsign'],
+            'name' => $entry['name'],
+            'location' => $entry['location'],
+            'comments' => $entry['comments'],
+        ),
+        array('id' => $entry_id),
+        array('%s', '%s', '%s', '%s'),
+        array('%d')
+    );
+}
+
+function netctrl_get_entry($entry_id)
+{
+    global $wpdb;
+    $table = netctrl_get_table('entries');
+
+    return $wpdb->get_row(
+        $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $entry_id),
+        ARRAY_A
+    );
+}
+
 function netctrl_get_entries($session_id)
 {
     global $wpdb;
     $table = netctrl_get_table('entries');
 
     return $wpdb->get_results(
-        $wpdb->prepare("SELECT * FROM {$table} WHERE session_id = %d ORDER BY created_at ASC", $session_id),
+        $wpdb->prepare("SELECT * FROM {$table} WHERE session_id = %d ORDER BY created_at ASC, id ASC", $session_id),
         ARRAY_A
     );
 }

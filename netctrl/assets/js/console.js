@@ -10,6 +10,10 @@
     activeSessionLabel: 'Current session:',
     noRecentSessions: 'No recent sessions found.',
     noEntries: 'No entries recorded yet.',
+    sessionPreviewFallback: 'Choose a session type to generate the session name.',
+    editEntry: 'Edit entry',
+    saveEntry: 'Save',
+    cancelEdit: 'Cancel',
     ...(config.strings || {}),
   };
 
@@ -47,12 +51,23 @@
     return response.json();
   };
 
+  const formatSessionDate = (date) => {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${month}/${day}/${year}`;
+  };
+
   const initConsole = (root) => {
     const sessionsList = root.querySelector('#netctrl-sessions');
     const entriesList = root.querySelector('#netctrl-entries');
     const activeSessionEl = root.querySelector('#netctrl-active-session');
     const messagesEl = root.querySelector('.netctrl-console__messages');
-    const netNameInput = root.querySelector('#netctrl-net-name');
+    const sessionDateInput = root.querySelector('#netctrl-session-date');
+    const sessionPreviewInput = root.querySelector('#netctrl-session-preview');
+    const specialEventWrap = root.querySelector('[data-netctrl-special-event]');
+    const eventDescriptionInput = root.querySelector('#netctrl-event-description');
+    const sessionTypeInputs = Array.from(root.querySelectorAll('input[name="netctrl-session-type"]'));
     const callsignInput = root.querySelector('#netctrl-callsign');
     const nameInput = root.querySelector('#netctrl-name');
     const locationInput = root.querySelector('#netctrl-location');
@@ -61,11 +76,24 @@
     const addEntryButton = root.querySelector('#netctrl-add-entry');
     const closeSessionButton = root.querySelector('#netctrl-close-session');
 
-    if (!sessionsList || !entriesList || !activeSessionEl || !startButton || !addEntryButton || !closeSessionButton) {
+    if (
+      !sessionsList ||
+      !entriesList ||
+      !activeSessionEl ||
+      !sessionDateInput ||
+      !sessionPreviewInput ||
+      !startButton ||
+      !addEntryButton ||
+      !closeSessionButton
+    ) {
       return;
     }
 
     let activeSessionId = null;
+    let editingEntryId = null;
+    const today = formatSessionDate(new Date());
+
+    sessionDateInput.value = today;
 
     const setMessage = (message = '', type = '') => {
       if (!messagesEl) {
@@ -78,6 +106,48 @@
       if (message && type) {
         messagesEl.classList.add(`netctrl-console__messages--${type}`);
       }
+    };
+
+    const getSelectedSessionType = () => sessionTypeInputs.find((input) => input.checked)?.value || '';
+
+    const getSessionPreview = () => {
+      const type = getSelectedSessionType();
+      const description = (eventDescriptionInput?.value || '').trim().replace(/\s+/g, ' ');
+
+      if (!type) {
+        return '';
+      }
+
+      const suffix = type === 'SE' && description ? ` ${description}` : '';
+      return `${today} ${type}${suffix}`.trim();
+    };
+
+    const refreshSessionPreview = () => {
+      const type = getSelectedSessionType();
+      const preview = getSessionPreview();
+      const showSpecialEvent = type === 'SE';
+
+      sessionTypeInputs.forEach((input) => {
+        input.closest('.netctrl-session-types__option')?.classList.toggle('is-selected', input.checked);
+      });
+
+      if (specialEventWrap) {
+        specialEventWrap.hidden = !showSpecialEvent;
+      }
+
+      if (!showSpecialEvent && eventDescriptionInput) {
+        eventDescriptionInput.value = '';
+      }
+
+      sessionPreviewInput.value = preview || strings.sessionPreviewFallback;
+    };
+
+    const clearEntryInputs = () => {
+      callsignInput.value = '';
+      nameInput.value = '';
+      locationInput.value = '';
+      commentsInput.value = '';
+      callsignInput.focus();
     };
 
     const renderSessions = (sessions) => {
@@ -105,10 +175,131 @@
       });
     };
 
+    const createCell = (content, className = '') => {
+      const cell = document.createElement('div');
+      cell.className = `netctrl-entries-table__cell${className ? ` ${className}` : ''}`;
+      if (content instanceof Node) {
+        cell.appendChild(content);
+      } else {
+        cell.textContent = content || '—';
+      }
+      return cell;
+    };
+
+    const createEditButton = (entry) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button button-small netctrl-entry-action';
+      button.setAttribute('aria-label', `${strings.editEntry}: ${entry.callsign}`);
+      button.title = strings.editEntry;
+      button.textContent = '✏️';
+      button.addEventListener('click', () => {
+        editingEntryId = entry.id;
+        renderEntries(currentEntries);
+      });
+      return button;
+    };
+
+    const createInlineEditor = (entry) => {
+      const row = document.createElement('li');
+      row.className = 'netctrl-entries-table__row netctrl-entries-table__row--editing';
+      row.setAttribute('role', 'row');
+      row.dataset.entryId = entry.id;
+
+      const callsignEditor = document.createElement('input');
+      callsignEditor.type = 'text';
+      callsignEditor.value = entry.callsign || '';
+
+      const nameEditor = document.createElement('input');
+      nameEditor.type = 'text';
+      nameEditor.value = entry.name || '';
+
+      const locationEditor = document.createElement('input');
+      locationEditor.type = 'text';
+      locationEditor.value = entry.location || '';
+
+      const commentsEditor = document.createElement('input');
+      commentsEditor.type = 'text';
+      commentsEditor.value = entry.comments || '';
+
+      const actions = document.createElement('div');
+      actions.className = 'netctrl-entry-actions';
+
+      const saveButton = document.createElement('button');
+      saveButton.type = 'button';
+      saveButton.className = 'button button-small';
+      saveButton.textContent = strings.saveEntry;
+
+      const cancelButton = document.createElement('button');
+      cancelButton.type = 'button';
+      cancelButton.className = 'button button-small';
+      cancelButton.textContent = strings.cancelEdit;
+
+      const saveEdit = async () => {
+        const payload = {
+          callsign: callsignEditor.value.trim(),
+          name: nameEditor.value.trim(),
+          location: locationEditor.value.trim(),
+          comments: commentsEditor.value.trim(),
+        };
+
+        if (!payload.callsign) {
+          callsignEditor.focus();
+          return;
+        }
+
+        try {
+          setMessage('');
+          await fetchJson(`${restUrl}/entries/${entry.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+          });
+          editingEntryId = null;
+          await loadEntries(activeSessionId);
+        } catch (error) {
+          setMessage(error.message || strings.requestFailed, 'error');
+        }
+      };
+
+      saveButton.addEventListener('click', saveEdit);
+      cancelButton.addEventListener('click', () => {
+        editingEntryId = null;
+        renderEntries(currentEntries);
+      });
+
+      [callsignEditor, nameEditor, locationEditor, commentsEditor].forEach((input) => {
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            saveEdit();
+          }
+
+          if (event.key === 'Escape') {
+            editingEntryId = null;
+            renderEntries(currentEntries);
+          }
+        });
+      });
+
+      actions.appendChild(saveButton);
+      actions.appendChild(cancelButton);
+
+      row.appendChild(createCell(callsignEditor));
+      row.appendChild(createCell(nameEditor));
+      row.appendChild(createCell(locationEditor));
+      row.appendChild(createCell(commentsEditor));
+      row.appendChild(createCell(actions, 'netctrl-entries-table__cell--actions'));
+
+      return row;
+    };
+
+    let currentEntries = [];
+
     const renderEntries = (entries) => {
+      currentEntries = Array.isArray(entries) ? entries : [];
       entriesList.innerHTML = '';
 
-      if (!entries.length) {
+      if (!currentEntries.length) {
         const item = document.createElement('li');
         item.textContent = strings.noEntries;
         item.className = 'netctrl-list__empty';
@@ -116,11 +307,23 @@
         return;
       }
 
-      entries.forEach((entry) => {
-        const item = document.createElement('li');
-        item.className = 'netctrl-list__item';
-        item.textContent = `${entry.callsign} ${entry.name || ''} ${entry.location || ''} ${entry.comments || ''}`.trim();
-        entriesList.appendChild(item);
+      currentEntries.forEach((entry) => {
+        if (editingEntryId === entry.id) {
+          entriesList.appendChild(createInlineEditor(entry));
+          return;
+        }
+
+        const row = document.createElement('li');
+        row.className = 'netctrl-entries-table__row';
+        row.setAttribute('role', 'row');
+        row.dataset.entryId = entry.id;
+
+        row.appendChild(createCell(entry.callsign));
+        row.appendChild(createCell(entry.name));
+        row.appendChild(createCell(entry.location));
+        row.appendChild(createCell(entry.comments));
+        row.appendChild(createCell(createEditButton(entry), 'netctrl-entries-table__cell--actions'));
+        entriesList.appendChild(row);
       });
     };
 
@@ -135,6 +338,7 @@
 
     const loadEntries = async (sessionId) => {
       if (!sessionId) {
+        editingEntryId = null;
         renderEntries([]);
         return;
       }
@@ -145,6 +349,7 @@
 
     const setActiveSession = async (session) => {
       activeSessionId = session.id;
+      editingEntryId = null;
       updateActiveSessionText(session);
       await loadEntries(activeSessionId);
     };
@@ -163,8 +368,8 @@
       }
     };
 
-    startButton.addEventListener('click', async () => {
-      const netName = netNameInput.value.trim();
+    const startSession = async () => {
+      const netName = getSessionPreview();
       if (!netName) {
         return;
       }
@@ -176,7 +381,13 @@
           body: JSON.stringify({ net_name: netName }),
         });
 
-        netNameInput.value = '';
+        sessionTypeInputs.forEach((input) => {
+          input.checked = false;
+        });
+        if (eventDescriptionInput) {
+          eventDescriptionInput.value = '';
+        }
+        refreshSessionPreview();
 
         if (data.session) {
           await loadSessions();
@@ -185,9 +396,9 @@
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }
-    });
+    };
 
-    addEntryButton.addEventListener('click', async () => {
+    const addEntry = async () => {
       if (!activeSessionId) {
         setMessage(strings.selectSession, 'error');
         return;
@@ -201,6 +412,7 @@
       };
 
       if (!payload.callsign) {
+        callsignInput.focus();
         return;
       }
 
@@ -211,15 +423,37 @@
           body: JSON.stringify(payload),
         });
 
-        callsignInput.value = '';
-        nameInput.value = '';
-        locationInput.value = '';
-        commentsInput.value = '';
-
+        clearEntryInputs();
         await loadEntries(activeSessionId);
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }
+    };
+
+    sessionTypeInputs.forEach((input) => {
+      input.addEventListener('change', refreshSessionPreview);
+    });
+
+    if (eventDescriptionInput) {
+      eventDescriptionInput.addEventListener('input', refreshSessionPreview);
+      eventDescriptionInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          startSession();
+        }
+      });
+    }
+
+    startButton.addEventListener('click', startSession);
+    addEntryButton.addEventListener('click', addEntry);
+
+    [callsignInput, nameInput, locationInput, commentsInput].forEach((input) => {
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addEntry();
+        }
+      });
     });
 
     closeSessionButton.addEventListener('click', async () => {
@@ -234,12 +468,15 @@
         });
 
         activeSessionId = null;
+        editingEntryId = null;
         updateActiveSessionText(null);
         await loadSessions();
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }
     });
+
+    refreshSessionPreview();
 
     loadSessions().catch((error) => {
       setMessage(error.message || strings.unableToLoadSessions, 'error');
