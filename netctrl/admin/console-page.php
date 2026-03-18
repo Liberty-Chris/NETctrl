@@ -137,8 +137,10 @@ function netctrl_get_console_markup($is_frontend = false)
                     <input type="text" id="netctrl-name" placeholder="<?php echo esc_attr__('Name', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-location" placeholder="<?php echo esc_attr__('Location', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-comments" placeholder="<?php echo esc_attr__('Comments', 'netctrl'); ?>" />
-                    <button type="button" class="button" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
-                    <button type="button" class="button" id="netctrl-close-session"><?php esc_html_e('Close Session', 'netctrl'); ?></button>
+                    <div class="netctrl-entry-form__actions">
+                        <button type="button" class="button button-primary" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
+                        <button type="button" class="button" id="netctrl-close-session"><?php esc_html_e('Close Session', 'netctrl'); ?></button>
+                    </div>
                 </div>
                 <div class="netctrl-panel__subsection">
                     <h3><?php esc_html_e('Entries', 'netctrl'); ?></h3>

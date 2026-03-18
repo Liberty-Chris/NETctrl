@@ -59,6 +59,7 @@
   padding: 0.5rem 0.9rem;
   border-radius: 8px;
   line-height: 1.2;
+  box-sizing: border-box;
 }
 
 .netctrl-panel {
@@ -70,6 +71,12 @@
   box-shadow: 0 4px 14px rgba(29, 35, 39, 0.05);
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.netctrl-panel *,
+.netctrl-panel *::before,
+.netctrl-panel *::after {
+  box-sizing: border-box;
 }
 
 .netctrl-panel h2,
@@ -180,13 +187,12 @@
 
 .netctrl-entry-form {
   display: grid;
-  grid-template-columns: minmax(100px, 1.1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(180px, 1.6fr) auto auto;
-  gap: 0.65rem;
+  grid-template-columns: minmax(110px, 0.9fr) minmax(130px, 1fr) minmax(130px, 1fr) minmax(220px, 2fr) auto;
+  gap: 0.75rem;
   margin: 0;
   align-items: stretch;
   min-width: 0;
   width: 100%;
-  box-sizing: border-box;
 }
 
 .netctrl-entry-form input,
@@ -198,14 +204,33 @@
 .netctrl-entry-form #netctrl-comments,
 .netctrl-entry-form #netctrl-location,
 .netctrl-entry-form #netctrl-name,
-.netctrl-entry-form #netctrl-callsign {
+.netctrl-entry-form #netctrl-callsign,
+.netctrl-entry-form__actions {
   min-width: 0;
 }
 
-.netctrl-entry-form #netctrl-add-entry,
-.netctrl-entry-form #netctrl-close-session {
+.netctrl-entry-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+
+.netctrl-entry-form__actions .button {
+  flex: 0 1 auto;
+  min-width: 132px;
   white-space: nowrap;
-  min-width: 0;
+}
+
+#netctrl-add-entry {
+  min-height: 40px;
+}
+
+#netctrl-close-session {
+  font-weight: 700;
+  border-color: #b32d2e;
+  color: #b32d2e;
 }
 
 .netctrl-list {
@@ -245,18 +270,19 @@
 
 .netctrl-entries-table__row {
   display: grid;
-  grid-template-columns: minmax(100px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(180px, 1.7fr) minmax(112px, auto);
+  grid-template-columns: minmax(100px, 0.95fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(240px, 2.2fr) minmax(152px, 152px);
   gap: 0.75rem;
-  align-items: center;
+  align-items: start;
   padding: 0.8rem 0.95rem;
   border-bottom: 1px solid #eee;
   min-width: 0;
-  box-sizing: border-box;
+  width: 100%;
 }
 
 .netctrl-entries-table__row--header {
   font-weight: 700;
   color: #1d2327;
+  align-items: center;
 }
 
 .netctrl-entries-table__body .netctrl-entries-table__row:last-child {
@@ -266,6 +292,7 @@
 .netctrl-entries-table__cell {
   min-width: 0;
   word-break: break-word;
+  overflow-wrap: anywhere;
   font-size: 0.95rem;
 }
 
@@ -273,12 +300,14 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  min-width: 152px;
 }
 
 .netctrl-entry-action {
-  min-width: 36px;
+  min-width: 68px;
   min-height: 36px;
-  padding: 0.4rem 0.55rem;
+  padding: 0.4rem 0.7rem;
+  gap: 0.35rem;
 }
 
 .netctrl-entry-action--delete {
@@ -288,12 +317,25 @@
 .netctrl-entry-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.5rem;
   align-items: center;
+  min-width: 0;
+}
+
+.netctrl-entries-table__row--editing {
+  align-items: stretch;
 }
 
 .netctrl-entries-table__row--editing input {
   min-height: 38px;
+}
+
+.netctrl-entries-table__row--editing .netctrl-entries-table__cell--actions {
+  grid-column: 1 / -1;
+}
+
+.netctrl-entries-table__row--editing .netctrl-entry-actions {
+  justify-content: flex-end;
 }
 
 .netctrl-panel--active-session .netctrl-panel__subsection,
@@ -304,24 +346,40 @@
   min-width: 0;
 }
 
+@media (max-width: 1180px) {
+  .netctrl-entry-form {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__actions {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 1080px) {
   .netctrl-entry-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .netctrl-entry-form #netctrl-comments,
-  .netctrl-entry-form #netctrl-close-session {
+  .netctrl-entry-form__actions {
     grid-column: span 2;
   }
 
   .netctrl-entries-table__row,
   .netctrl-entries-table__row--header {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: minmax(90px, 0.9fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(180px, 1.8fr) minmax(140px, 140px);
+  }
+}
+
+@media (max-width: 900px) {
+  .netctrl-entry-form__actions {
+    justify-content: stretch;
   }
 
-  .netctrl-entry-form #netctrl-add-entry,
-  .netctrl-entry-form #netctrl-close-session {
-    width: 100%;
+  .netctrl-entry-form__actions .button {
+    flex: 1 1 180px;
   }
 }
 
@@ -339,8 +397,17 @@
   }
 
   .netctrl-entry-form #netctrl-comments,
-  .netctrl-entry-form #netctrl-close-session {
+  .netctrl-entry-form__actions {
     grid-column: span 1;
+  }
+
+  .netctrl-entry-form__actions {
+    justify-content: stretch;
+  }
+
+  .netctrl-entry-form__actions .button {
+    flex: 1 1 100%;
+    width: 100%;
   }
 
   .netctrl-entries-table__head {
@@ -352,9 +419,11 @@
     gap: 0.5rem;
   }
 
-  .netctrl-entries-table__cell {
+  .netctrl-entries-table__cell,
+  .netctrl-entries-table__cell--actions {
     display: grid;
     gap: 0.25rem;
+    min-width: 0;
   }
 
   .netctrl-entries-table__cell::before {
@@ -380,5 +449,10 @@
 
   .netctrl-entries-table__row > .netctrl-entries-table__cell:nth-child(5)::before {
     content: 'Actions';
+  }
+
+  .netctrl-entries-table__cell--actions,
+  .netctrl-entries-table__row--editing .netctrl-entries-table__cell--actions {
+    grid-column: auto;
   }
 }
