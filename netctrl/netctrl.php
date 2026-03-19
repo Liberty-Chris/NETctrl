@@ -16,7 +16,7 @@ define('NETCTRL_VERSION', '0.1.0');
 define('NETCTRL_PATH', plugin_dir_path(__FILE__));
 define('NETCTRL_URL', plugin_dir_url(__FILE__));
 
-define('NETCTRL_DB_VERSION', '1.0');
+define('NETCTRL_DB_VERSION', '1.1');
 
 require_once NETCTRL_PATH . 'includes/db.php';
 require_once NETCTRL_PATH . 'includes/capabilities.php';
@@ -25,10 +25,12 @@ require_once NETCTRL_PATH . 'includes/qrz.php';
 require_once NETCTRL_PATH . 'includes/pdf.php';
 require_once NETCTRL_PATH . 'includes/rest.php';
 require_once NETCTRL_PATH . 'admin/console-page.php';
+require_once NETCTRL_PATH . 'admin/roster-page.php';
 require_once NETCTRL_PATH . 'public/shortcode-log.php';
 
 register_activation_hook(__FILE__, 'netctrl_activate_plugin');
 register_deactivation_hook(__FILE__, 'netctrl_deactivate_plugin');
+add_action('plugins_loaded', 'netctrl_maybe_upgrade_db');
 
 function netctrl_activate_plugin()
 {

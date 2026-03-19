@@ -112,6 +112,20 @@ function netctrl_register_routes()
             'permission_callback' => 'netctrl_rest_require_auth',
         ),
     ));
+
+    register_rest_route('netctrl/v1', '/roster/lookup', array(
+        array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => 'netctrl_rest_lookup_roster_entry',
+            'permission_callback' => 'netctrl_rest_require_auth',
+            'args' => array(
+                'callsign' => array(
+                    'required' => true,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+            ),
+        ),
+    ));
 }
 
 function netctrl_rest_require_auth()
@@ -208,9 +222,32 @@ function netctrl_rest_delete_entry(WP_REST_Request $request)
     ));
 }
 
+function netctrl_rest_lookup_roster_entry(WP_REST_Request $request)
+{
+    $callsign = netctrl_normalize_callsign($request->get_param('callsign'));
+    $entry = netctrl_get_roster_entry_by_callsign($callsign);
+
+    if (!$entry) {
+        return rest_ensure_response(array(
+            'found' => false,
+            'callsign' => $callsign,
+        ));
+    }
+
+    return rest_ensure_response(array(
+        'found' => true,
+        'callsign' => $entry['callsign'],
+        'name' => $entry['name'],
+        'location' => $entry['location'],
+        'license_class' => $entry['license_class'],
+        'is_member' => (bool) $entry['is_member'],
+        'is_officer' => (bool) $entry['is_officer'],
+    ));
+}
+
 function netctrl_rest_prepare_entry_payload(WP_REST_Request $request)
 {
-    $callsign = $request->get_param('callsign');
+    $callsign = netctrl_normalize_callsign($request->get_param('callsign'));
     $entry = array(
         'callsign' => $callsign,
         'name' => $request->get_param('name'),
