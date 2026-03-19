@@ -87,13 +87,68 @@ function netctrl_normalize_roster_flag($value)
         return $value === 1 ? 1 : 0;
     }
 
+    if (is_float($value)) {
+        return (float) $value === 1.0 ? 1 : 0;
+    }
+
     $normalized = strtolower(trim((string) $value));
 
     if ($normalized === '') {
         return 0;
     }
 
-    return in_array($normalized, array('1', 'yes', 'y', 'true', 'on'), true) ? 1 : 0;
+    return in_array($normalized, array('1', 'yes', 'y', 'true', 'on', 'member', 'officer', 'active', 'x'), true) ? 1 : 0;
+}
+
+function netctrl_normalize_license_class($value)
+{
+    $normalized = strtoupper(trim((string) $value));
+
+    if ($normalized === '') {
+        return '';
+    }
+
+    $aliases = array(
+        'T' => 'T',
+        'TECH' => 'T',
+        'TECHNICIAN' => 'T',
+        'G' => 'G',
+        'GEN' => 'G',
+        'GENERAL' => 'G',
+        'E' => 'E',
+        'EX' => 'E',
+        'EXTRA' => 'E',
+        'AMATEUR EXTRA' => 'E',
+        'A' => 'A',
+        'ADVANCED' => 'A',
+        'N' => 'N',
+        'NOVICE' => 'N',
+    );
+
+    return $aliases[$normalized] ?? sanitize_text_field($value);
+}
+
+function netctrl_normalize_roster_csv_column($column)
+{
+    $column = strtolower(trim((string) $column));
+    $column = preg_replace('/^\x{feff}/u', '', $column);
+    $column = preg_replace('/[^a-z0-9]+/', '_', $column);
+    $column = trim((string) $column, '_');
+
+    $aliases = array(
+        'call_sign' => 'callsign',
+        'call' => 'callsign',
+        'member' => 'is_member',
+        'members' => 'is_member',
+        'officer' => 'is_officer',
+        'officers' => 'is_officer',
+        'license' => 'license_class',
+        'licenseclass' => 'license_class',
+        'licence_class' => 'license_class',
+        'class' => 'license_class',
+    );
+
+    return $aliases[$column] ?? $column;
 }
 
 function netctrl_prepare_roster_entry(array $entry)
@@ -102,7 +157,7 @@ function netctrl_prepare_roster_entry(array $entry)
         'callsign' => netctrl_normalize_callsign($entry['callsign'] ?? ''),
         'name' => sanitize_text_field($entry['name'] ?? ''),
         'location' => sanitize_text_field($entry['location'] ?? ''),
-        'license_class' => sanitize_text_field($entry['license_class'] ?? ''),
+        'license_class' => netctrl_normalize_license_class($entry['license_class'] ?? ''),
         'is_member' => netctrl_normalize_roster_flag($entry['is_member'] ?? 0),
         'is_officer' => netctrl_normalize_roster_flag($entry['is_officer'] ?? 0),
     );
@@ -173,12 +228,7 @@ function netctrl_import_roster_csv($file_path)
         return new WP_Error('netctrl_roster_csv_empty', __('The uploaded CSV file is empty.', 'netctrl'));
     }
 
-    $columns = array_map(
-        static function ($column) {
-            return sanitize_key($column);
-        },
-        $header
-    );
+    $columns = array_map('netctrl_normalize_roster_csv_column', $header);
 
     $required_callsign_column = array_search('callsign', $columns, true);
     if ($required_callsign_column === false) {

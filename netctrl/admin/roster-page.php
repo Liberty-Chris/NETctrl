@@ -261,8 +261,9 @@ function netctrl_render_roster_page()
 
         <div class="card" style="max-width: 960px; margin-bottom: 20px;">
             <h2><?php esc_html_e('Import CSV', 'netctrl'); ?></h2>
-            <p><?php esc_html_e('Supported columns: callsign, name, location, license_class, is_member, is_officer. Extra columns are ignored.', 'netctrl'); ?></p>
-            <p><?php esc_html_e('Truthy member and officer values accepted during import: 1, yes, y, true, on.', 'netctrl'); ?></p>
+            <p><?php esc_html_e('Supported columns: callsign, name, location, license_class, member, officer. Extra columns are ignored.', 'netctrl'); ?></p>
+            <p><?php esc_html_e('Truthy member and officer values accepted during import include: 1, yes, y, true, on, active, x. Blank values import as No.', 'netctrl'); ?></p>
+            <p><?php esc_html_e('License class values accepted during import include: T/Technician, G/General, E/Extra, plus A/Advanced and N/Novice.', 'netctrl'); ?></p>
             <form method="post" enctype="multipart/form-data">
                 <?php wp_nonce_field('netctrl_roster_import'); ?>
                 <input type="hidden" name="netctrl_roster_import" value="1" />
