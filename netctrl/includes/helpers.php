@@ -30,7 +30,7 @@ function netctrl_get_user_login_label($user_id)
     return (string) $user->user_login;
 }
 
-function netctrl_format_recent_session_timestamp($datetime)
+function netctrl_format_display_timestamp($datetime)
 {
     $datetime = trim((string) $datetime);
 
@@ -38,22 +38,22 @@ function netctrl_format_recent_session_timestamp($datetime)
         return '';
     }
 
-    $timezone = wp_timezone();
-    $event_datetime = date_create_immutable_from_format('Y-m-d H:i:s', $datetime, $timezone);
+    $timestamp = strtotime($datetime);
 
-    if (!$event_datetime) {
+    if ($timestamp === false) {
         return '';
     }
 
-    $timestamp = $event_datetime->getTimestamp();
-    $event_date = $event_datetime->format('Y-m-d');
-    $today_date = current_datetime()->setTimezone($timezone)->format('Y-m-d');
-
-    if ($event_date === $today_date) {
-        return wp_date('g:i A', $timestamp, $timezone);
+    if (wp_date('Y-m-d', $timestamp) === wp_date('Y-m-d')) {
+        return wp_date('g:i A', $timestamp);
     }
 
-    return wp_date('m/d/y \a\t g:i A', $timestamp, $timezone);
+    return wp_date('m/d/y g:i A', $timestamp);
+}
+
+function netctrl_format_recent_session_timestamp($datetime)
+{
+    return netctrl_format_display_timestamp($datetime);
 }
 
 function netctrl_build_recent_session_audit_lines(array $session)
@@ -91,6 +91,20 @@ function netctrl_build_recent_session_audit_lines(array $session)
     return $audit_lines;
 }
 
+
+function netctrl_prepare_entry_for_response(array $entry)
+{
+    if (!empty($entry['created_at'])) {
+        $entry['created_at'] = netctrl_format_display_timestamp($entry['created_at']);
+    }
+
+    if (!empty($entry['updated_at'])) {
+        $entry['updated_at'] = netctrl_format_display_timestamp($entry['updated_at']);
+    }
+
+    return $entry;
+}
+
 function netctrl_prepare_session_for_response(array $session)
 {
     if (empty($session['created_at']) && !empty($session['started_at'])) {
@@ -98,6 +112,12 @@ function netctrl_prepare_session_for_response(array $session)
     }
 
     $session['recent_session_audit'] = netctrl_build_recent_session_audit_lines($session);
+
+    foreach (array('started_at', 'created_at', 'closed_at', 'updated_at') as $field) {
+        if (!empty($session[$field])) {
+            $session[$field] = netctrl_format_display_timestamp($session[$field]);
+        }
+    }
 
     return $session;
 }
