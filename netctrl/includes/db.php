@@ -25,7 +25,12 @@ function netctrl_install_tables()
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         net_name VARCHAR(190) NOT NULL,
         started_at DATETIME NOT NULL,
+        created_at DATETIME NOT NULL,
+        created_by BIGINT UNSIGNED NULL,
         closed_at DATETIME NULL,
+        closed_by BIGINT UNSIGNED NULL,
+        updated_at DATETIME NULL,
+        updated_by BIGINT UNSIGNED NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'open',
         PRIMARY KEY  (id)
     ) {$charset_collate};";
@@ -59,6 +64,8 @@ function netctrl_install_tables()
     dbDelta($sql_sessions);
     dbDelta($sql_entries);
     dbDelta($sql_roster);
+
+    $wpdb->query("UPDATE {$sessions_table} SET created_at = started_at WHERE created_at IS NULL OR created_at = '0000-00-00 00:00:00'");
 
     update_option('netctrl_db_version', NETCTRL_DB_VERSION);
 }
@@ -413,15 +420,19 @@ function netctrl_create_session($net_name)
 {
     global $wpdb;
     $table = netctrl_get_table('sessions');
+    $timestamp = current_time('mysql');
+    $user_id = get_current_user_id();
 
     $wpdb->insert(
         $table,
         array(
             'net_name' => $net_name,
-            'started_at' => current_time('mysql'),
+            'started_at' => $timestamp,
+            'created_at' => $timestamp,
+            'created_by' => $user_id ?: null,
             'status' => 'open',
         ),
-        array('%s', '%s', '%s')
+        array('%s', '%s', '%s', '%d', '%s')
     );
 
     return $wpdb->insert_id;
@@ -431,15 +442,38 @@ function netctrl_close_session($session_id)
 {
     global $wpdb;
     $table = netctrl_get_table('sessions');
+    $timestamp = current_time('mysql');
+    $user_id = get_current_user_id();
 
     return $wpdb->update(
         $table,
         array(
             'status' => 'closed',
-            'closed_at' => current_time('mysql'),
+            'closed_at' => $timestamp,
+            'closed_by' => $user_id ?: null,
         ),
         array('id' => $session_id),
-        array('%s', '%s'),
+        array('%s', '%s', '%d'),
+        array('%d')
+    );
+}
+
+function netctrl_touch_session($session_id)
+{
+    global $wpdb;
+
+    $table = netctrl_get_table('sessions');
+    $timestamp = current_time('mysql');
+    $user_id = get_current_user_id();
+
+    return $wpdb->update(
+        $table,
+        array(
+            'updated_at' => $timestamp,
+            'updated_by' => $user_id ?: null,
+        ),
+        array('id' => $session_id),
+        array('%s', '%d'),
         array('%d')
     );
 }
@@ -488,6 +522,10 @@ function netctrl_add_entry($session_id, array $entry)
         array('%d', '%s', '%s', '%s', '%s', '%s')
     );
 
+    if ($wpdb->insert_id) {
+        netctrl_touch_session($session_id);
+    }
+
     return $wpdb->insert_id;
 }
 
@@ -495,8 +533,9 @@ function netctrl_update_entry($entry_id, array $entry)
 {
     global $wpdb;
     $table = netctrl_get_table('entries');
+    $existing = netctrl_get_entry($entry_id);
 
-    return $wpdb->update(
+    $updated = $wpdb->update(
         $table,
         array(
             'callsign' => $entry['callsign'],
@@ -508,18 +547,31 @@ function netctrl_update_entry($entry_id, array $entry)
         array('%s', '%s', '%s', '%s'),
         array('%d')
     );
+
+    if ($updated !== false && $existing) {
+        netctrl_touch_session((int) $existing['session_id']);
+    }
+
+    return $updated;
 }
 
 function netctrl_delete_entry($entry_id)
 {
     global $wpdb;
     $table = netctrl_get_table('entries');
+    $existing = netctrl_get_entry($entry_id);
 
-    return $wpdb->delete(
+    $deleted = $wpdb->delete(
         $table,
         array('id' => $entry_id),
         array('%d')
     );
+
+    if ($deleted && $existing) {
+        netctrl_touch_session((int) $existing['session_id']);
+    }
+
+    return $deleted;
 }
 
 function netctrl_get_entry($entry_id)
