@@ -26,6 +26,7 @@ require_once NETCTRL_PATH . 'includes/pdf.php';
 require_once NETCTRL_PATH . 'includes/rest.php';
 require_once NETCTRL_PATH . 'admin/console-page.php';
 require_once NETCTRL_PATH . 'admin/roster-page.php';
+require_once NETCTRL_PATH . 'admin/qrz-settings-page.php';
 require_once NETCTRL_PATH . 'public/shortcode-log.php';
 
 register_activation_hook(__FILE__, 'netctrl_activate_plugin');

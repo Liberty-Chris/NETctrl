@@ -187,7 +187,7 @@
 
 .netctrl-entry-form {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(240px, 2fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
   width: 100%;
 }
@@ -207,10 +207,19 @@
 
 .netctrl-entry-form #netctrl-comments,
 .netctrl-entry-form #netctrl-location,
-.netctrl-entry-form #netctrl-name,
+.netctrl-entry-form #netctrl-first-name,
+.netctrl-entry-form #netctrl-last-name,
 .netctrl-entry-form #netctrl-callsign,
-.netctrl-entry-form__actions {
+.netctrl-entry-form__actions,
+.netctrl-entry-form__lookup-note {
   min-width: 0;
+}
+
+.netctrl-entry-form__lookup-note {
+  grid-column: 1 / -1;
+  min-height: 1.25rem;
+  color: #50575e;
+  font-size: 0.9rem;
 }
 
 .netctrl-entry-form__actions {
@@ -374,12 +383,13 @@
 
 @media (max-width: 1180px) {
   .netctrl-entry-form {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__lookup-note,
   .netctrl-entry-form__actions {
-    grid-column: span 2;
+    grid-column: span 3;
   }
 }
 
@@ -389,6 +399,7 @@
   }
 
   .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__lookup-note,
   .netctrl-entry-form__actions {
     grid-column: span 2;
   }
@@ -423,6 +434,7 @@
   }
 
   .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__lookup-note,
   .netctrl-entry-form__actions {
     grid-column: span 1;
   }

@@ -71,9 +71,11 @@
     const eventDescriptionInput = root.querySelector('#netctrl-event-description');
     const sessionTypeInputs = Array.from(root.querySelectorAll('input[name="netctrl-session-type"]'));
     const callsignInput = root.querySelector('#netctrl-callsign');
-    const nameInput = root.querySelector('#netctrl-name');
+    const firstNameInput = root.querySelector('#netctrl-first-name');
+    const lastNameInput = root.querySelector('#netctrl-last-name');
     const locationInput = root.querySelector('#netctrl-location');
     const commentsInput = root.querySelector('#netctrl-comments');
+    const lookupStatusEl = root.querySelector('#netctrl-lookup-status');
     const startButton = root.querySelector('#netctrl-start-session');
     const addEntryButton = root.querySelector('#netctrl-add-entry');
     const closeSessionButton = root.querySelector('#netctrl-close-session');
@@ -88,7 +90,8 @@
       !addEntryButton ||
       !closeSessionButton ||
       !callsignInput ||
-      !nameInput ||
+      !firstNameInput ||
+      !lastNameInput ||
       !locationInput ||
       !commentsInput
     ) {
@@ -100,9 +103,12 @@
     let userDismissedActiveSession = false;
     let currentEntries = [];
     let suppressFieldTracking = false;
-    let nameEditToken = 0;
-    let locationEditToken = 0;
     let lookupSequence = 0;
+    const fieldState = {
+      firstName: { manual: false, autoCallsign: '', autoValue: '' },
+      lastName: { manual: false, autoCallsign: '', autoValue: '' },
+      location: { manual: false, autoCallsign: '', autoValue: '' },
+    };
     const today = formatSessionDate(new Date());
 
     sessionDateInput.value = today;
@@ -162,14 +168,29 @@
       suppressFieldTracking = false;
     };
 
+    const clearLookupStatus = () => {
+      if (lookupStatusEl) {
+        lookupStatusEl.textContent = '';
+      }
+    };
+
+    const resetFieldState = (key) => {
+      fieldState[key].manual = false;
+      fieldState[key].autoCallsign = '';
+      fieldState[key].autoValue = '';
+    };
+
     const clearEntryInputs = () => {
       lookupSequence += 1;
       setTrackedFieldValue(callsignInput, '');
-      setTrackedFieldValue(nameInput, '');
+      setTrackedFieldValue(firstNameInput, '');
+      setTrackedFieldValue(lastNameInput, '');
       setTrackedFieldValue(locationInput, '');
       commentsInput.value = '';
-      nameEditToken = 0;
-      locationEditToken = 0;
+      resetFieldState('firstName');
+      resetFieldState('lastName');
+      resetFieldState('location');
+      clearLookupStatus();
       callsignInput.focus();
     };
 
@@ -463,20 +484,38 @@
       }
     };
 
-    const lookupRosterEntry = async () => {
+    const applyLookupValue = (input, key, normalizedCallsign, value) => {
+      if (!value) {
+        return;
+      }
+
+      const state = fieldState[key];
+      const currentValue = input.value.trim();
+      const canOverwrite = currentValue === '' || !state.manual;
+
+      if (!canOverwrite) {
+        return;
+      }
+
+      setTrackedFieldValue(input, value);
+      state.manual = false;
+      state.autoCallsign = normalizedCallsign;
+      state.autoValue = value;
+    };
+
+    const lookupCallsign = async () => {
       const normalizedCallsign = normalizeCallsign(callsignInput.value);
       setTrackedFieldValue(callsignInput, normalizedCallsign);
+      clearLookupStatus();
 
       if (!normalizedCallsign) {
         return;
       }
 
       const requestId = ++lookupSequence;
-      const nameTokenAtRequest = nameEditToken;
-      const locationTokenAtRequest = locationEditToken;
 
       try {
-        const result = await fetchJson(`${restUrl}/roster/lookup?callsign=${encodeURIComponent(normalizedCallsign)}`, {
+        const result = await fetchJson(`${restUrl}/lookup/callsign?callsign=${encodeURIComponent(normalizedCallsign)}`, {
           method: 'GET',
         });
 
@@ -488,15 +527,15 @@
           return;
         }
 
-        if (nameEditToken === nameTokenAtRequest && result.name) {
-          setTrackedFieldValue(nameInput, result.name);
-        }
+        applyLookupValue(firstNameInput, 'firstName', normalizedCallsign, result.first_name || '');
+        applyLookupValue(lastNameInput, 'lastName', normalizedCallsign, result.last_name || '');
+        applyLookupValue(locationInput, 'location', normalizedCallsign, result.location || '');
 
-        if (locationEditToken === locationTokenAtRequest && result.location) {
-          setTrackedFieldValue(locationInput, result.location);
+        if (lookupStatusEl) {
+          lookupStatusEl.textContent = result.source === 'qrz' ? strings.lookupQrz : strings.lookupRoster;
         }
       } catch (error) {
-        setMessage(error.message || strings.requestFailed, 'error');
+        clearLookupStatus();
       }
     };
 
@@ -538,7 +577,7 @@
 
       const payload = {
         callsign: normalizeCallsign(callsignInput.value),
-        name: nameInput.value.trim(),
+        name: [firstNameInput.value.trim(), lastNameInput.value.trim()].filter(Boolean).join(' '),
         location: locationInput.value.trim(),
         comments: commentsInput.value.trim(),
       };
@@ -578,33 +617,51 @@
       });
     }
 
-    nameInput.addEventListener('input', () => {
-      if (!suppressFieldTracking) {
-        nameEditToken += 1;
+    const markFieldAsManual = (key, input) => {
+      if (suppressFieldTracking) {
+        return;
       }
+
+      const state = fieldState[key];
+      state.manual = true;
+
+      if (input.value.trim() === '') {
+        state.autoCallsign = '';
+        state.autoValue = '';
+      }
+    };
+
+    firstNameInput.addEventListener('input', () => {
+      markFieldAsManual('firstName', firstNameInput);
+    });
+
+    lastNameInput.addEventListener('input', () => {
+      markFieldAsManual('lastName', lastNameInput);
     });
 
     locationInput.addEventListener('input', () => {
-      if (!suppressFieldTracking) {
-        locationEditToken += 1;
-      }
+      markFieldAsManual('location', locationInput);
+    });
+
+    callsignInput.addEventListener('input', () => {
+      clearLookupStatus();
     });
 
     callsignInput.addEventListener('blur', () => {
-      lookupRosterEntry();
+      lookupCallsign();
     });
 
     callsignInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        lookupRosterEntry();
+        lookupCallsign();
       }
     });
 
     startButton.addEventListener('click', startSession);
     addEntryButton.addEventListener('click', addEntry);
 
-    [nameInput, locationInput, commentsInput].forEach((input) => {
+    [firstNameInput, lastNameInput, locationInput, commentsInput].forEach((input) => {
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();

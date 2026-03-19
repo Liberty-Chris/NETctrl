@@ -113,10 +113,10 @@ function netctrl_register_routes()
         ),
     ));
 
-    register_rest_route('netctrl/v1', '/roster/lookup', array(
+    register_rest_route('netctrl/v1', '/lookup/callsign', array(
         array(
             'methods' => WP_REST_Server::READABLE,
-            'callback' => 'netctrl_rest_lookup_roster_entry',
+            'callback' => 'netctrl_rest_lookup_callsign',
             'permission_callback' => 'netctrl_rest_require_auth',
             'args' => array(
                 'callsign' => array(
@@ -224,27 +224,9 @@ function netctrl_rest_delete_entry(WP_REST_Request $request)
     ));
 }
 
-function netctrl_rest_lookup_roster_entry(WP_REST_Request $request)
+function netctrl_rest_lookup_callsign(WP_REST_Request $request)
 {
-    $callsign = netctrl_normalize_callsign($request->get_param('callsign'));
-    $entry = netctrl_get_roster_entry_by_callsign($callsign);
-
-    if (!$entry) {
-        return rest_ensure_response(array(
-            'found' => false,
-            'callsign' => $callsign,
-        ));
-    }
-
-    return rest_ensure_response(array(
-        'found' => true,
-        'callsign' => $entry['callsign'],
-        'name' => $entry['name'],
-        'location' => $entry['location'],
-        'license_class' => $entry['license_class'],
-        'is_member' => (bool) $entry['is_member'],
-        'is_officer' => (bool) $entry['is_officer'],
-    ));
+    return rest_ensure_response(netctrl_lookup_callsign_data($request->get_param('callsign')));
 }
 
 function netctrl_rest_prepare_entry_payload(WP_REST_Request $request)
@@ -258,13 +240,15 @@ function netctrl_rest_prepare_entry_payload(WP_REST_Request $request)
     );
 
     if (empty($entry['name']) || empty($entry['location'])) {
-        $lookup = netctrl_qrz_lookup($callsign);
-        if ($lookup) {
+        $lookup = netctrl_lookup_callsign_data($callsign);
+
+        if (!empty($lookup['found'])) {
             if (empty($entry['name'])) {
-                $entry['name'] = $lookup['name'];
+                $entry['name'] = netctrl_join_name_parts($lookup['first_name'] ?? '', $lookup['last_name'] ?? '');
             }
+
             if (empty($entry['location'])) {
-                $entry['location'] = $lookup['location'];
+                $entry['location'] = $lookup['location'] ?? '';
             }
         }
     }

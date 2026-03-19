@@ -53,6 +53,8 @@ function netctrl_enqueue_console_assets()
             'deleteEntryConfirm' => __('Delete this entry?', 'netctrl'),
             'saveEntry' => __('Save', 'netctrl'),
             'cancelEdit' => __('Cancel', 'netctrl'),
+            'lookupRoster' => __('Populated from roster', 'netctrl'),
+            'lookupQrz' => __('Populated from QRZ', 'netctrl'),
         ),
     ));
 }
@@ -134,9 +136,11 @@ function netctrl_get_console_markup($is_frontend = false)
                 </div>
                 <div class="netctrl-entry-form" role="group" aria-label="<?php echo esc_attr__('Entry form', 'netctrl'); ?>">
                     <input type="text" id="netctrl-callsign" placeholder="<?php echo esc_attr__('Callsign', 'netctrl'); ?>" />
-                    <input type="text" id="netctrl-name" placeholder="<?php echo esc_attr__('Name', 'netctrl'); ?>" />
+                    <input type="text" id="netctrl-first-name" placeholder="<?php echo esc_attr__('First Name', 'netctrl'); ?>" />
+                    <input type="text" id="netctrl-last-name" placeholder="<?php echo esc_attr__('Last Name', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-location" placeholder="<?php echo esc_attr__('Location', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-comments" placeholder="<?php echo esc_attr__('Comments', 'netctrl'); ?>" />
+                    <div class="netctrl-entry-form__lookup-note" id="netctrl-lookup-status" aria-live="polite"></div>
                     <div class="netctrl-entry-form__actions">
                         <button type="button" class="button button-primary" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
                         <button type="button" class="button" id="netctrl-close-session"><?php esc_html_e('Close Session', 'netctrl'); ?></button>
