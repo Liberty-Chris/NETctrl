@@ -86,7 +86,11 @@
       !sessionPreviewInput ||
       !startButton ||
       !addEntryButton ||
-      !closeSessionButton
+      !closeSessionButton ||
+      !callsignInput ||
+      !nameInput ||
+      !locationInput ||
+      !commentsInput
     ) {
       return;
     }
@@ -94,6 +98,11 @@
     let activeSessionId = null;
     let editingEntryId = null;
     let userDismissedActiveSession = false;
+    let currentEntries = [];
+    let suppressFieldTracking = false;
+    let nameEditToken = 0;
+    let locationEditToken = 0;
+    let lookupSequence = 0;
     const today = formatSessionDate(new Date());
 
     sessionDateInput.value = today;
@@ -145,11 +154,22 @@
       sessionPreviewInput.value = preview || strings.sessionPreviewFallback;
     };
 
+    const normalizeCallsign = (value) => value.trim().toUpperCase();
+
+    const setTrackedFieldValue = (input, value) => {
+      suppressFieldTracking = true;
+      input.value = value;
+      suppressFieldTracking = false;
+    };
+
     const clearEntryInputs = () => {
-      callsignInput.value = '';
-      nameInput.value = '';
-      locationInput.value = '';
+      lookupSequence += 1;
+      setTrackedFieldValue(callsignInput, '');
+      setTrackedFieldValue(nameInput, '');
+      setTrackedFieldValue(locationInput, '');
       commentsInput.value = '';
+      nameEditToken = 0;
+      locationEditToken = 0;
       callsignInput.focus();
     };
 
@@ -274,7 +294,7 @@
 
       const saveEdit = async () => {
         const payload = {
-          callsign: callsignEditor.value.trim(),
+          callsign: normalizeCallsign(callsignEditor.value),
           name: nameEditor.value.trim(),
           location: locationEditor.value.trim(),
           comments: commentsEditor.value.trim(),
@@ -284,6 +304,8 @@
           callsignEditor.focus();
           return;
         }
+
+        callsignEditor.value = payload.callsign;
 
         try {
           setMessage('');
@@ -329,8 +351,6 @@
 
       return row;
     };
-
-    let currentEntries = [];
 
     const renderEntries = (entries) => {
       currentEntries = Array.isArray(entries) ? entries : [];
@@ -422,6 +442,43 @@
       }
     };
 
+    const lookupRosterEntry = async () => {
+      const normalizedCallsign = normalizeCallsign(callsignInput.value);
+      setTrackedFieldValue(callsignInput, normalizedCallsign);
+
+      if (!normalizedCallsign) {
+        return;
+      }
+
+      const requestId = ++lookupSequence;
+      const nameTokenAtRequest = nameEditToken;
+      const locationTokenAtRequest = locationEditToken;
+
+      try {
+        const result = await fetchJson(`${restUrl}/roster/lookup?callsign=${encodeURIComponent(normalizedCallsign)}`, {
+          method: 'GET',
+        });
+
+        if (
+          requestId !== lookupSequence ||
+          normalizeCallsign(callsignInput.value) !== normalizedCallsign ||
+          !result?.found
+        ) {
+          return;
+        }
+
+        if (nameEditToken === nameTokenAtRequest && result.name) {
+          setTrackedFieldValue(nameInput, result.name);
+        }
+
+        if (locationEditToken === locationTokenAtRequest && result.location) {
+          setTrackedFieldValue(locationInput, result.location);
+        }
+      } catch (error) {
+        setMessage(error.message || strings.requestFailed, 'error');
+      }
+    };
+
     const startSession = async () => {
       const netName = getSessionPreview();
       if (!netName) {
@@ -459,7 +516,7 @@
       }
 
       const payload = {
-        callsign: callsignInput.value.trim(),
+        callsign: normalizeCallsign(callsignInput.value),
         name: nameInput.value.trim(),
         location: locationInput.value.trim(),
         comments: commentsInput.value.trim(),
@@ -469,6 +526,8 @@
         callsignInput.focus();
         return;
       }
+
+      setTrackedFieldValue(callsignInput, payload.callsign);
 
       try {
         setMessage('');
@@ -498,10 +557,33 @@
       });
     }
 
+    nameInput.addEventListener('input', () => {
+      if (!suppressFieldTracking) {
+        nameEditToken += 1;
+      }
+    });
+
+    locationInput.addEventListener('input', () => {
+      if (!suppressFieldTracking) {
+        locationEditToken += 1;
+      }
+    });
+
+    callsignInput.addEventListener('blur', () => {
+      lookupRosterEntry();
+    });
+
+    callsignInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        lookupRosterEntry();
+      }
+    });
+
     startButton.addEventListener('click', startSession);
     addEntryButton.addEventListener('click', addEntry);
 
-    [callsignInput, nameInput, locationInput, commentsInput].forEach((input) => {
+    [nameInput, locationInput, commentsInput].forEach((input) => {
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();

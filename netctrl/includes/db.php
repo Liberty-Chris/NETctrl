@@ -19,6 +19,7 @@ function netctrl_install_tables()
     $charset_collate = $wpdb->get_charset_collate();
     $sessions_table = netctrl_get_table('sessions');
     $entries_table = netctrl_get_table('entries');
+    $roster_table = netctrl_get_table('roster');
 
     $sql_sessions = "CREATE TABLE {$sessions_table} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -41,10 +42,212 @@ function netctrl_install_tables()
         KEY session_id (session_id)
     ) {$charset_collate};";
 
+    $sql_roster = "CREATE TABLE {$roster_table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        callsign VARCHAR(50) NOT NULL,
+        name VARCHAR(190) NULL,
+        location VARCHAR(190) NULL,
+        license_class VARCHAR(50) NULL,
+        is_member TINYINT(1) NOT NULL DEFAULT 0,
+        is_officer TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY callsign (callsign)
+    ) {$charset_collate};";
+
     dbDelta($sql_sessions);
     dbDelta($sql_entries);
+    dbDelta($sql_roster);
 
     update_option('netctrl_db_version', NETCTRL_DB_VERSION);
+}
+
+function netctrl_maybe_upgrade_db()
+{
+    $installed_version = get_option('netctrl_db_version');
+
+    if ($installed_version !== NETCTRL_DB_VERSION) {
+        netctrl_install_tables();
+    }
+}
+
+function netctrl_normalize_callsign($callsign)
+{
+    return strtoupper(trim((string) $callsign));
+}
+
+function netctrl_normalize_roster_flag($value)
+{
+    if (is_bool($value)) {
+        return $value ? 1 : 0;
+    }
+
+    $normalized = strtolower(trim((string) $value));
+
+    return in_array($normalized, array('1', 'true', 'yes', 'y', 'on'), true) ? 1 : 0;
+}
+
+function netctrl_prepare_roster_entry(array $entry)
+{
+    return array(
+        'callsign' => netctrl_normalize_callsign($entry['callsign'] ?? ''),
+        'name' => sanitize_text_field($entry['name'] ?? ''),
+        'location' => sanitize_text_field($entry['location'] ?? ''),
+        'license_class' => sanitize_text_field($entry['license_class'] ?? ''),
+        'is_member' => netctrl_normalize_roster_flag($entry['is_member'] ?? 0),
+        'is_officer' => netctrl_normalize_roster_flag($entry['is_officer'] ?? 0),
+    );
+}
+
+function netctrl_upsert_roster_entry(array $entry)
+{
+    global $wpdb;
+
+    $table = netctrl_get_table('roster');
+    $prepared = netctrl_prepare_roster_entry($entry);
+
+    if ($prepared['callsign'] === '') {
+        return false;
+    }
+
+    $existing = netctrl_get_roster_entry_by_callsign($prepared['callsign']);
+    $timestamp = current_time('mysql');
+
+    if ($existing) {
+        $updated = $wpdb->update(
+            $table,
+            array(
+                'name' => $prepared['name'],
+                'location' => $prepared['location'],
+                'license_class' => $prepared['license_class'],
+                'is_member' => $prepared['is_member'],
+                'is_officer' => $prepared['is_officer'],
+                'updated_at' => $timestamp,
+            ),
+            array('id' => $existing['id']),
+            array('%s', '%s', '%s', '%d', '%d', '%s'),
+            array('%d')
+        );
+
+        return $updated === false ? false : (int) $existing['id'];
+    }
+
+    $inserted = $wpdb->insert(
+        $table,
+        array(
+            'callsign' => $prepared['callsign'],
+            'name' => $prepared['name'],
+            'location' => $prepared['location'],
+            'license_class' => $prepared['license_class'],
+            'is_member' => $prepared['is_member'],
+            'is_officer' => $prepared['is_officer'],
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ),
+        array('%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s')
+    );
+
+    return $inserted ? (int) $wpdb->insert_id : false;
+}
+
+function netctrl_import_roster_csv($file_path)
+{
+    $handle = fopen($file_path, 'r');
+
+    if (!$handle) {
+        return new WP_Error('netctrl_roster_csv_open_failed', __('Unable to open the uploaded CSV file.', 'netctrl'));
+    }
+
+    $header = fgetcsv($handle);
+    if (!$header) {
+        fclose($handle);
+        return new WP_Error('netctrl_roster_csv_empty', __('The uploaded CSV file is empty.', 'netctrl'));
+    }
+
+    $columns = array_map(
+        static function ($column) {
+            return sanitize_key($column);
+        },
+        $header
+    );
+
+    $required_callsign_column = array_search('callsign', $columns, true);
+    if ($required_callsign_column === false) {
+        fclose($handle);
+        return new WP_Error('netctrl_roster_csv_invalid', __('The CSV file must include a callsign column.', 'netctrl'));
+    }
+
+    $result = array(
+        'processed' => 0,
+        'saved' => 0,
+        'skipped' => 0,
+    );
+
+    while (($row = fgetcsv($handle)) !== false) {
+        if ($row === array(null) || $row === false) {
+            continue;
+        }
+
+        $mapped = array();
+        foreach ($columns as $index => $column) {
+            if ($column === '') {
+                continue;
+            }
+
+            $mapped[$column] = $row[$index] ?? '';
+        }
+
+        $result['processed']++;
+
+        if (netctrl_upsert_roster_entry($mapped) === false) {
+            $result['skipped']++;
+            continue;
+        }
+
+        $result['saved']++;
+    }
+
+    fclose($handle);
+
+    return $result;
+}
+
+function netctrl_get_roster_entries()
+{
+    global $wpdb;
+    $table = netctrl_get_table('roster');
+
+    return $wpdb->get_results("SELECT * FROM {$table} ORDER BY callsign ASC", ARRAY_A);
+}
+
+function netctrl_get_roster_entry_by_callsign($callsign)
+{
+    global $wpdb;
+
+    $table = netctrl_get_table('roster');
+    $normalized_callsign = netctrl_normalize_callsign($callsign);
+
+    if ($normalized_callsign === '') {
+        return null;
+    }
+
+    return $wpdb->get_row(
+        $wpdb->prepare("SELECT * FROM {$table} WHERE callsign = %s", $normalized_callsign),
+        ARRAY_A
+    );
+}
+
+function netctrl_delete_roster_entry($roster_id)
+{
+    global $wpdb;
+    $table = netctrl_get_table('roster');
+
+    return $wpdb->delete(
+        $table,
+        array('id' => $roster_id),
+        array('%d')
+    );
 }
 
 function netctrl_create_session($net_name)
