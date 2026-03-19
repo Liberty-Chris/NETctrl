@@ -83,9 +83,17 @@ function netctrl_normalize_roster_flag($value)
         return $value ? 1 : 0;
     }
 
+    if (is_int($value)) {
+        return $value === 1 ? 1 : 0;
+    }
+
     $normalized = strtolower(trim((string) $value));
 
-    return in_array($normalized, array('1', 'true', 'yes', 'y', 'on'), true) ? 1 : 0;
+    if ($normalized === '') {
+        return 0;
+    }
+
+    return in_array($normalized, array('1', 'yes', 'y', 'true', 'on'), true) ? 1 : 0;
 }
 
 function netctrl_prepare_roster_entry(array $entry)
@@ -236,6 +244,107 @@ function netctrl_get_roster_entry_by_callsign($callsign)
         $wpdb->prepare("SELECT * FROM {$table} WHERE callsign = %s", $normalized_callsign),
         ARRAY_A
     );
+}
+
+function netctrl_get_roster_entry($roster_id)
+{
+    global $wpdb;
+
+    $table = netctrl_get_table('roster');
+    $roster_id = (int) $roster_id;
+
+    if ($roster_id <= 0) {
+        return null;
+    }
+
+    return $wpdb->get_row(
+        $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $roster_id),
+        ARRAY_A
+    );
+}
+
+function netctrl_create_roster_entry(array $entry)
+{
+    global $wpdb;
+
+    $table = netctrl_get_table('roster');
+    $prepared = netctrl_prepare_roster_entry($entry);
+
+    if ($prepared['callsign'] === '') {
+        return new WP_Error('netctrl_roster_callsign_required', __('Callsign is required.', 'netctrl'));
+    }
+
+    if (netctrl_get_roster_entry_by_callsign($prepared['callsign'])) {
+        return new WP_Error('netctrl_roster_duplicate_callsign', __('A roster entry with that callsign already exists.', 'netctrl'));
+    }
+
+    $timestamp = current_time('mysql');
+    $inserted = $wpdb->insert(
+        $table,
+        array(
+            'callsign' => $prepared['callsign'],
+            'name' => $prepared['name'],
+            'location' => $prepared['location'],
+            'license_class' => $prepared['license_class'],
+            'is_member' => $prepared['is_member'],
+            'is_officer' => $prepared['is_officer'],
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ),
+        array('%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s')
+    );
+
+    if (!$inserted) {
+        return new WP_Error('netctrl_roster_insert_failed', __('Unable to save the roster entry.', 'netctrl'));
+    }
+
+    return (int) $wpdb->insert_id;
+}
+
+function netctrl_update_roster_entry($roster_id, array $entry)
+{
+    global $wpdb;
+
+    $table = netctrl_get_table('roster');
+    $roster_id = (int) $roster_id;
+    $existing = netctrl_get_roster_entry($roster_id);
+
+    if (!$existing) {
+        return new WP_Error('netctrl_roster_not_found', __('Roster entry not found.', 'netctrl'));
+    }
+
+    $prepared = netctrl_prepare_roster_entry($entry);
+
+    if ($prepared['callsign'] === '') {
+        return new WP_Error('netctrl_roster_callsign_required', __('Callsign is required.', 'netctrl'));
+    }
+
+    $duplicate = netctrl_get_roster_entry_by_callsign($prepared['callsign']);
+    if ($duplicate && (int) $duplicate['id'] !== $roster_id) {
+        return new WP_Error('netctrl_roster_duplicate_callsign', __('A roster entry with that callsign already exists.', 'netctrl'));
+    }
+
+    $updated = $wpdb->update(
+        $table,
+        array(
+            'callsign' => $prepared['callsign'],
+            'name' => $prepared['name'],
+            'location' => $prepared['location'],
+            'license_class' => $prepared['license_class'],
+            'is_member' => $prepared['is_member'],
+            'is_officer' => $prepared['is_officer'],
+            'updated_at' => current_time('mysql'),
+        ),
+        array('id' => $roster_id),
+        array('%s', '%s', '%s', '%s', '%d', '%d', '%s'),
+        array('%d')
+    );
+
+    if ($updated === false) {
+        return new WP_Error('netctrl_roster_update_failed', __('Unable to update the roster entry.', 'netctrl'));
+    }
+
+    return $roster_id;
 }
 
 function netctrl_delete_roster_entry($roster_id)
