@@ -1,10 +1,10 @@
 # NETctrl
 
-NETctrl is a real time net control logging system built by the Jennings County Amateur Radio Association (JCARA).
+NETctrl is a real time net control logging system built by Chris Hockaday / KF4DBX of the Jennings County Amateur Radio Association (JCARA).
 
-The current public release is a WordPress plugin designed for amateur radio clubs, emergency communications groups, and other organizations that run regular nets. NETctrl is being built first in WordPress, with a longer-term roadmap that includes standalone, desktop, and mobile versions so clubs can use the platform in more environments over time.
+The current public release is a WordPress plugin designed for amateur radio clubs, emergency communications groups, and other organizations that run regular nets. NETctrl is being built first in WordPress, with a longer-term roadmap that includes standalone, desktop and mobile versions so clubs can use the platform in more environments over time. It runs fine in mobile environments now, but feels a bit clunky for practical use.
 
-Built by JCARA, NETctrl is intended to be useful well beyond a single organization and is open for adoption by other clubs and groups.
+From JCARA, NETctrl is intended to be useful well beyond a single organization and is open for adoption by other clubs and groups.
 
 ## Features
 
@@ -42,9 +42,9 @@ After activation, complete the basic setup below.
 ### Create the operator console page
 
 1. In WordPress admin, create a new page such as **Net Control Console**.
-2. Add the shortcode `[netctrl_console]` to the page content.
+2. Add the shortcode `[netctrl_console]` to the page content and adjust your CSS accordingly, if needed.
 3. Publish the page.
-4. Share the page URL with your operators.
+4. Share the public facing page URL with your operators.
 
 Only logged-in users with NETctrl access can use the console.
 
@@ -117,7 +117,7 @@ NETctrl supports roster imports by CSV to speed up initial setup and ongoing mai
 
 ### Expected columns
 
-The most common columns are:
+The expected columns are:
 
 - `callsign` - required
 - `name`
@@ -126,7 +126,7 @@ The most common columns are:
 - `is_member`
 - `is_officer`
 
-NETctrl also accepts common header variations such as `call_sign`, `call`, `member`, `officer`, `license`, and `class`.
+NETctrl will also accept common header variations such as `call_sign`, `call`, `member`, `officer`, `license`, and `class`.
 
 ### Acceptable values
 
@@ -137,6 +137,8 @@ For the `member` or `officer` fields, NETctrl accepts values such as:
 - `yes`
 
 These values are case insensitive. Blank values are treated as false.
+
+A template is provided in Templates.
 
 ### How CSV upload works
 
@@ -165,7 +167,7 @@ When QRZ lookup is enabled:
 
 - NETctrl always checks the local roster first.
 - QRZ is only used when the callsign is not found in the roster.
-- Only the first name, last name, and location are populated from QRZ.
+- Only the first name, last name and location are populated from QRZ.
 
 This keeps local club data in control while still helping operators handle stations that are not yet in the roster.
 
@@ -185,8 +187,8 @@ The long-term direction is to keep the WordPress release useful while expanding 
 The current plugin source is organized into a few main directories inside `netctrl/`:
 
 - `admin` - WordPress admin pages and operator console integration.
-- `assets` - stylesheets, scripts, and static assets.
-- `includes` - core plugin logic, database handling, capabilities, REST routes, and integrations.
+- `assets` - stylesheets, scripts and static assets.
+- `includes` - core plugin logic, database handling, capabilities, REST routes and integrations.
 - `public` - public-facing shortcodes and related output.
 
 ## Development note
@@ -199,4 +201,4 @@ Installable plugin packages are provided through GitHub Releases. If you want to
 
 This project is licensed under the **GNU General Public License v2.0 or later (GPL-2.0-or-later)**.
 
-This keeps NETctrl compatible with WordPress while ensuring the project remains open, community-driven, and available for clubs and groups that want to build on it.
+This keeps NETctrl compatible with WordPress while ensuring the project remains open, community-driven and available for clubs and groups that want to build on it.
