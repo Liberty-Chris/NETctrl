@@ -135,7 +135,9 @@ function netctrl_rest_require_auth()
 
 function netctrl_rest_list_sessions()
 {
-    return rest_ensure_response(netctrl_get_sessions());
+    $sessions = array_map('netctrl_prepare_session_for_response', netctrl_get_sessions());
+
+    return rest_ensure_response($sessions);
 }
 
 function netctrl_rest_get_session(WP_REST_Request $request)
@@ -145,7 +147,7 @@ function netctrl_rest_get_session(WP_REST_Request $request)
         return new WP_Error('netctrl_not_found', __('Session not found.', 'netctrl'), array('status' => 404));
     }
 
-    return rest_ensure_response($session);
+    return rest_ensure_response(netctrl_prepare_session_for_response($session));
 }
 
 function netctrl_rest_create_session(WP_REST_Request $request)
@@ -155,7 +157,7 @@ function netctrl_rest_create_session(WP_REST_Request $request)
 
     return rest_ensure_response(array(
         'id' => $session_id,
-        'session' => netctrl_get_session($session_id),
+        'session' => netctrl_prepare_session_for_response(netctrl_get_session($session_id)),
     ));
 }
 
@@ -164,7 +166,7 @@ function netctrl_rest_close_session(WP_REST_Request $request)
     $session_id = (int) $request['id'];
     netctrl_close_session($session_id);
 
-    return rest_ensure_response(netctrl_get_session($session_id));
+    return rest_ensure_response(netctrl_prepare_session_for_response(netctrl_get_session($session_id)));
 }
 
 function netctrl_rest_list_entries(WP_REST_Request $request)

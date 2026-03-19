@@ -186,9 +186,30 @@
 
       sessions.forEach((session) => {
         const item = document.createElement('li');
-        item.className = 'netctrl-list__item';
-        item.textContent = `${session.net_name} (${session.status})`;
+        const title = document.createElement('div');
+        const auditLines = Array.isArray(session.recent_session_audit) ? session.recent_session_audit : [];
+
+        item.className = 'netctrl-list__item netctrl-session-list__item';
         item.dataset.sessionId = session.id;
+
+        title.className = 'netctrl-session-list__title';
+        title.textContent = `${session.net_name} (${session.status})`;
+        item.appendChild(title);
+
+        if (auditLines.length) {
+          const auditList = document.createElement('div');
+          auditList.className = 'netctrl-session-list__audit';
+
+          auditLines.forEach((line) => {
+            const auditLine = document.createElement('div');
+            auditLine.className = 'netctrl-session-list__audit-line';
+            auditLine.textContent = line;
+            auditList.appendChild(auditLine);
+          });
+
+          item.appendChild(auditList);
+        }
+
         item.addEventListener('click', () => {
           setActiveSession(session).catch((error) => {
             setMessage(error.message || strings.unableToLoadEntries, 'error');
