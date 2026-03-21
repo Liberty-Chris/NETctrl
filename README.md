@@ -101,7 +101,7 @@ Operators are created as standard WordPress users and assigned the **Net Control
 
 Install NETctrl in WordPress using the release package provided in GitHub Releases.
 
-1. Download the plugin ZIP from the repository's **Releases** section.
+1. Download the latest plugin ZIP from the [Releases](https://github.com/Liberty-Chris/NETctrl/releases) page.
 2. In WordPress admin, go to **Plugins**.
 3. Select **Add Plugin**.
 4. Select **Upload Plugin**.
