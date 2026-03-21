@@ -25,6 +25,78 @@ NETctrl focuses on practical, day-to-day net operations with a clean workflow fo
 - QRZ fallback lookup for non-roster callsigns when enabled.
 - Role-based access using WordPress users and permissions.
 
+## Interface Overview
+
+The NETctrl console is designed for fast, real time net operations with minimal friction during active sessions.
+
+<p align="center">
+  <img src="logos/ui/netctrl_interface_overview.png" width="900">
+</p>
+
+### Active Session Logging
+
+Operators can quickly log stations, edit entries, and manage traffic in real time during an active net.
+
+<p align="center">
+  <img src="logos/ui/netctrl_new_active_session_management.png" width="900">
+</p>
+
+### Entry Management
+
+Each check-in can be edited or removed as needed, allowing operators to correct information without disrupting the session.
+
+<p align="center">
+  <img src="logos/ui/netctrl_active_and_closed_session_management_with_entries.png" width="900">
+</p>
+
+### Recent Sessions and Audit Trail
+
+NETctrl keeps track of session history, including who created, edited, and closed each session with timestamps.
+
+<p align="center">
+  <img src="logos/ui/netctrl_recent_sessions_w_timestamps.png" width="250">
+</p>
+
+### Roster Management
+
+Administrators maintain a centralized roster used to auto-populate operator details during sessions.
+
+<p align="center">
+  <img src="logos/ui/netctrl_roster_management.png" width="900">
+</p>
+
+### CSV Import and Manual Entry
+
+Rosters can be imported via CSV or managed manually through the admin interface.
+
+<p align="center">
+  <img src="logos/ui/netctrl_roster_upload_and_manual_entry.png" width="900">
+</p>
+
+### QRZ Integration
+
+When a callsign is not found in the roster, NETctrl can optionally pull data from QRZ to assist operators during live logging.
+
+<p align="center">
+  <img src="logos/ui/netctrl_qrz_settings.png" width="900">
+</p>
+
+### Admin Interface
+
+Administrators have access to roster management, QRZ configuration, and system-level controls.
+
+<p align="center">
+  <img src="logos/ui/netctrl_admin_view_w_netctrl_roster_and_qrz_tabs.png" width="400">
+</p>
+
+### Assigning Net Control Operators
+
+Operators are created as standard WordPress users and assigned the **Net Control** role. This gives them access to the NETctrl console while restricting administrative functions.
+
+<p align="center">
+  <img src="logos/ui/netctrl_role_setting.png" width="600">
+</p>
+
 ## Installation
 
 Install NETctrl in WordPress using the release package provided in GitHub Releases.
