@@ -75,7 +75,7 @@ Rosters can be imported via CSV or managed manually through the admin interface.
 
 ### QRZ Integration
 
-When a callsign is not found in the roster, NETctrl can optionally pull data from QRZ to assist operators during live logging. A QRZ.com XML account is required for this feature to function.
+When a callsign is not found in the roster, NETctrl can optionally pull data from QRZ to assist operators during live logging. A QRZ.com XML account is required for this feature to function. Once enabled, all authorized users with the correct role assignment will be able to leverage this while logging from the front end control panel. Settings are restricted to admins only.
 
 <p align="center">
   <img src="logos/ui/netctrl_qrz_settings.png" width="900">
