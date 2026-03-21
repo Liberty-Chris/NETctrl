@@ -2,6 +2,10 @@
 
 NETctrl is a real time net control logging system built by Chris Hockaday / KF4DBX of the Jennings County Amateur Radio Association (JCARA).
 
+<p align="center">
+  <img src="logos/netctrl_medium.png" alt="NETctrl logo" width="600">
+</p>
+
 The current public release is a WordPress plugin designed for amateur radio clubs, emergency communications groups, and other organizations that run regular nets. NETctrl is being built first in WordPress, with a longer-term roadmap that includes standalone, desktop and mobile versions so clubs can use the platform in more environments over time. It runs fine in mobile environments now, but feels a bit clunky for practical use.
 
 From JCARA, NETctrl is intended to be useful well beyond a single organization and is open for adoption by other clubs and groups.
