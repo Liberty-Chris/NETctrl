@@ -91,9 +91,32 @@ function netctrl_build_recent_session_audit_lines(array $session)
     return $audit_lines;
 }
 
+function netctrl_get_status_label($status)
+{
+    return $status === 'open' ? __('Live', 'netctrl') : __('Closed', 'netctrl');
+}
+
+function netctrl_get_status_description(array $session)
+{
+    if (($session['status'] ?? '') === 'open') {
+        return __('Live session in progress', 'netctrl');
+    }
+
+    if (!empty($session['closed_at'])) {
+        return sprintf(
+            __('Closed %s', 'netctrl'),
+            netctrl_format_display_timestamp($session['closed_at'])
+        );
+    }
+
+    return __('Session complete', 'netctrl');
+}
 
 function netctrl_prepare_entry_for_response(array $entry)
 {
+    $entry['created_at_raw'] = $entry['created_at'] ?? '';
+    $entry['updated_at_raw'] = $entry['updated_at'] ?? '';
+
     if (!empty($entry['created_at'])) {
         $entry['created_at'] = netctrl_format_display_timestamp($entry['created_at']);
     }
@@ -111,7 +134,13 @@ function netctrl_prepare_session_for_response(array $session)
         $session['created_at'] = $session['started_at'];
     }
 
+    $session['started_at_raw'] = $session['started_at'] ?? '';
+    $session['created_at_raw'] = $session['created_at'] ?? '';
+    $session['closed_at_raw'] = $session['closed_at'] ?? '';
+    $session['updated_at_raw'] = $session['updated_at'] ?? '';
     $session['recent_session_audit'] = netctrl_build_recent_session_audit_lines($session);
+    $session['status_label'] = netctrl_get_status_label($session['status'] ?? 'closed');
+    $session['status_description'] = netctrl_get_status_description($session);
 
     foreach (array('started_at', 'created_at', 'closed_at', 'updated_at') as $field) {
         if (!empty($session[$field])) {
@@ -120,4 +149,25 @@ function netctrl_prepare_session_for_response(array $session)
     }
 
     return $session;
+}
+
+function netctrl_prepare_public_session_payload(array $session)
+{
+    $prepared = netctrl_prepare_session_for_response($session);
+    $prepared['entries'] = array_map('netctrl_prepare_entry_for_response', netctrl_get_entries((int) $session['id']));
+    $prepared['pdf_url'] = ($session['status'] ?? '') === 'closed' ? netctrl_get_pdf_url((int) $session['id']) : '';
+
+    return $prepared;
+}
+
+function netctrl_get_public_sessions_payload($closed_limit = 5)
+{
+    $open_sessions = array_map('netctrl_prepare_public_session_payload', netctrl_get_sessions('open'));
+    $closed_sessions = array_map('netctrl_prepare_public_session_payload', netctrl_get_recent_closed_sessions((int) $closed_limit));
+
+    return array(
+        'open_sessions' => $open_sessions,
+        'closed_sessions' => $closed_sessions,
+        'generated_at' => current_time('mysql'),
+    );
 }

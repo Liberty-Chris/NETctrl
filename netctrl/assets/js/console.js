@@ -2,6 +2,7 @@
   const config = window.netctrlConsole || {};
   const restUrl = config.restUrl;
   const nonce = config.nonce;
+  const pollInterval = Number(config.pollInterval) || 4000;
   const strings = {
     unableToLoadSessions: 'Unable to load sessions.',
     unableToLoadEntries: 'Unable to load entries.',
@@ -16,6 +17,15 @@
     deleteEntryConfirm: 'Delete this entry?',
     saveEntry: 'Save',
     cancelEdit: 'Cancel',
+    lookupRoster: 'Populated from roster',
+    lookupQrz: 'Populated from QRZ',
+    sessionActive: 'Session active',
+    liveSessionInProgress: 'Live session in progress',
+    startDisabled: 'Start Session is unavailable while another live session is open.',
+    sessionClosed: 'Session closed.',
+    monitoringLive: 'Polling live updates every few seconds.',
+    statusLive: 'Live',
+    statusClosed: 'Closed',
     ...(config.strings || {}),
   };
 
@@ -44,7 +54,7 @@
         const error = await response.json();
         message = error?.message || message;
       } catch (err) {
-        // Ignore JSON parsing failures and keep the generic message.
+        // Keep generic message.
       }
 
       throw new Error(message);
@@ -60,10 +70,14 @@
     return `${month}/${day}/${year}`;
   };
 
+  const stableStringify = (value) => JSON.stringify(value || null);
+
   const initConsole = (root) => {
     const sessionsList = root.querySelector('#netctrl-sessions');
     const entriesList = root.querySelector('#netctrl-entries');
     const activeSessionEl = root.querySelector('#netctrl-active-session');
+    const activeSessionMetaEl = root.querySelector('#netctrl-active-session-meta');
+    const activeStatusBadgeEl = root.querySelector('#netctrl-active-status-badge');
     const messagesEl = root.querySelector('.netctrl-console__messages');
     const sessionDateInput = root.querySelector('#netctrl-session-date');
     const sessionPreviewInput = root.querySelector('#netctrl-session-preview');
@@ -79,11 +93,16 @@
     const startButton = root.querySelector('#netctrl-start-session');
     const addEntryButton = root.querySelector('#netctrl-add-entry');
     const closeSessionButton = root.querySelector('#netctrl-close-session');
+    const startPanel = root.querySelector('[data-netctrl-start-panel]');
+    const startStatusEl = root.querySelector('[data-netctrl-start-status]');
+    const startNoteEl = root.querySelector('[data-netctrl-start-note]');
+    const activePanel = root.querySelector('[data-netctrl-active-panel]');
 
     if (
       !sessionsList ||
       !entriesList ||
       !activeSessionEl ||
+      !activeStatusBadgeEl ||
       !sessionDateInput ||
       !sessionPreviewInput ||
       !startButton ||
@@ -93,7 +112,11 @@
       !firstNameInput ||
       !lastNameInput ||
       !locationInput ||
-      !commentsInput
+      !commentsInput ||
+      !startPanel ||
+      !startStatusEl ||
+      !startNoteEl ||
+      !activePanel
     ) {
       return;
     }
@@ -102,22 +125,24 @@
     let editingEntryId = null;
     let userDismissedActiveSession = false;
     let currentEntries = [];
+    let currentSession = null;
+    let currentSessions = [];
+    let sessionsSignature = '';
+    let entriesSignature = '';
+    let pollingHandle = null;
+    let pollInFlight = false;
     let suppressFieldTracking = false;
     let lookupSequence = 0;
     const fieldState = {
-      firstName: { manual: false, autoCallsign: '', autoValue: '' },
-      lastName: { manual: false, autoCallsign: '', autoValue: '' },
-      location: { manual: false, autoCallsign: '', autoValue: '' },
+      firstName: { manual: false },
+      lastName: { manual: false },
+      location: { manual: false },
     };
     const today = formatSessionDate(new Date());
 
     sessionDateInput.value = today;
 
     const setMessage = (message = '', type = '') => {
-      if (!messagesEl) {
-        return;
-      }
-
       messagesEl.textContent = message;
       messagesEl.className = 'netctrl-console__messages';
 
@@ -169,15 +194,11 @@
     };
 
     const clearLookupStatus = () => {
-      if (lookupStatusEl) {
-        lookupStatusEl.textContent = '';
-      }
+      lookupStatusEl.textContent = '';
     };
 
     const resetFieldState = (key) => {
       fieldState[key].manual = false;
-      fieldState[key].autoCallsign = '';
-      fieldState[key].autoValue = '';
     };
 
     const clearEntryInputs = () => {
@@ -194,28 +215,103 @@
       callsignInput.focus();
     };
 
+    const setStatusBadge = (element, status) => {
+      element.className = 'netctrl-status-badge';
+
+      if (status === 'open') {
+        element.classList.add('netctrl-status-badge--live');
+        element.textContent = strings.statusLive;
+        return;
+      }
+
+      if (status === 'closed') {
+        element.classList.add('netctrl-status-badge--closed');
+        element.textContent = strings.statusClosed;
+        return;
+      }
+
+      element.classList.add('netctrl-status-badge--idle');
+      element.textContent = 'Idle';
+    };
+
+    const updateControlState = (session) => {
+      const hasLiveSession = currentSessions.some((item) => item.status === 'open');
+      const isOpen = session?.status === 'open';
+
+      startButton.disabled = hasLiveSession;
+      sessionTypeInputs.forEach((input) => {
+        input.disabled = hasLiveSession;
+      });
+      if (eventDescriptionInput) {
+        eventDescriptionInput.disabled = hasLiveSession;
+      }
+
+      addEntryButton.disabled = !isOpen;
+      closeSessionButton.disabled = !isOpen;
+      [callsignInput, firstNameInput, lastNameInput, locationInput, commentsInput].forEach((input) => {
+        input.disabled = !isOpen;
+      });
+
+      startPanel.classList.toggle('is-live', hasLiveSession);
+      activePanel.classList.toggle('is-live', isOpen);
+      activePanel.classList.toggle('is-closed', Boolean(session && session.status === 'closed'));
+
+      setStatusBadge(startStatusEl, hasLiveSession ? 'open' : null);
+      setStatusBadge(activeStatusBadgeEl, session?.status || null);
+
+      startNoteEl.textContent = hasLiveSession ? strings.liveSessionInProgress : 'Start a session to begin live logging.';
+
+      if (hasLiveSession) {
+        startButton.textContent = strings.sessionActive;
+        startButton.setAttribute('aria-disabled', 'true');
+      } else {
+        startButton.textContent = 'Start Session';
+        startButton.removeAttribute('aria-disabled');
+      }
+
+      activeSessionMetaEl.textContent = session
+        ? (session.status_description || strings.monitoringLive)
+        : strings.monitoringLive;
+    };
+
     const renderSessions = (sessions) => {
+      const nextSignature = stableStringify(sessions);
+      currentSessions = Array.isArray(sessions) ? sessions : [];
+
+      if (nextSignature === sessionsSignature) {
+        updateControlState(currentSession);
+        return;
+      }
+
+      sessionsSignature = nextSignature;
       sessionsList.innerHTML = '';
 
-      if (!sessions.length) {
+      if (!currentSessions.length) {
         const item = document.createElement('li');
         item.textContent = strings.noRecentSessions;
         item.className = 'netctrl-list__empty';
         sessionsList.appendChild(item);
+        updateControlState(currentSession);
         return;
       }
 
-      sessions.forEach((session) => {
+      currentSessions.forEach((session) => {
         const item = document.createElement('li');
         const title = document.createElement('div');
         const auditLines = Array.isArray(session.recent_session_audit) ? session.recent_session_audit : [];
 
         item.className = 'netctrl-list__item netctrl-session-list__item';
         item.dataset.sessionId = session.id;
+        item.classList.toggle('is-selected', Number(activeSessionId) === Number(session.id));
 
         title.className = 'netctrl-session-list__title';
-        title.textContent = `${session.net_name} (${session.status})`;
+        title.textContent = session.net_name;
         item.appendChild(title);
+
+        const meta = document.createElement('div');
+        meta.className = 'netctrl-session-list__meta';
+        meta.textContent = `${session.status_label || session.status} · ${session.status_description || ''}`;
+        item.appendChild(meta);
 
         if (auditLines.length) {
           const auditList = document.createElement('div');
@@ -232,12 +328,14 @@
         }
 
         item.addEventListener('click', () => {
-          setActiveSession(session).catch((error) => {
+          setActiveSession(session, { forceEntriesReload: true }).catch((error) => {
             setMessage(error.message || strings.unableToLoadEntries, 'error');
           });
         });
         sessionsList.appendChild(item);
       });
+
+      updateControlState(currentSession);
     };
 
     const createCell = (content, className = '') => {
@@ -258,11 +356,30 @@
       button.setAttribute('aria-label', `${strings.editEntry}: ${entry.callsign}`);
       button.title = strings.editEntry;
       button.textContent = strings.editEntry;
+      button.disabled = currentSession?.status !== 'open';
       button.addEventListener('click', () => {
         editingEntryId = entry.id;
         renderEntries(currentEntries);
       });
       return button;
+    };
+
+    const loadEntries = async (sessionId, force = false) => {
+      if (!sessionId) {
+        editingEntryId = null;
+        renderEntries([]);
+        return;
+      }
+
+      const entries = await fetchJson(`${restUrl}/sessions/${sessionId}/entries`);
+      const nextSignature = stableStringify(entries);
+
+      if (!force && nextSignature === entriesSignature) {
+        return;
+      }
+
+      entriesSignature = nextSignature;
+      renderEntries(entries);
     };
 
     const deleteEntry = async (entry) => {
@@ -280,7 +397,8 @@
           editingEntryId = null;
         }
 
-        await loadEntries(activeSessionId);
+        await loadEntries(activeSessionId, true);
+        await loadSessions(true);
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }
@@ -293,6 +411,7 @@
       button.setAttribute('aria-label', `${strings.deleteEntry}: ${entry.callsign}`);
       button.title = strings.deleteEntry;
       button.textContent = strings.deleteEntry;
+      button.disabled = currentSession?.status !== 'open';
       button.addEventListener('click', () => {
         deleteEntry(entry);
       });
@@ -356,7 +475,8 @@
             body: JSON.stringify(payload),
           });
           editingEntryId = null;
-          await loadEntries(activeSessionId);
+          await loadEntries(activeSessionId, true);
+          await loadSessions(true);
         } catch (error) {
           setMessage(error.message || strings.requestFailed, 'error');
         }
@@ -432,59 +552,69 @@
     };
 
     const updateActiveSessionText = (session) => {
+      currentSession = session || null;
+
       if (!session) {
         activeSessionEl.textContent = strings.selectSession;
+        activeSessionMetaEl.textContent = strings.monitoringLive;
+        setStatusBadge(activeStatusBadgeEl, null);
+        updateControlState(null);
         return;
       }
 
-      activeSessionEl.textContent = `${strings.activeSessionLabel} ${session.net_name} (${session.status})`;
+      activeSessionEl.textContent = `${strings.activeSessionLabel} ${session.net_name}`;
+      activeSessionMetaEl.textContent = session.status_description || strings.monitoringLive;
+      setStatusBadge(activeStatusBadgeEl, session.status || null);
+      updateControlState(session);
     };
 
-    const loadEntries = async (sessionId) => {
-      if (!sessionId) {
-        editingEntryId = null;
-        renderEntries([]);
-        return;
-      }
-
-      const entries = await fetchJson(`${restUrl}/sessions/${sessionId}/entries`);
-      renderEntries(entries);
-    };
-
-    const setActiveSession = async (session) => {
+    const setActiveSession = async (session, options = {}) => {
       activeSessionId = session.id;
       userDismissedActiveSession = false;
       editingEntryId = null;
       updateActiveSessionText(session);
-      await loadEntries(activeSessionId);
+      await loadEntries(activeSessionId, Boolean(options.forceEntriesReload));
+      renderSessions(currentSessions);
     };
 
     const resetActiveSession = () => {
       activeSessionId = null;
       editingEntryId = null;
+      currentSession = null;
       userDismissedActiveSession = true;
+      entriesSignature = '';
       clearEntryInputs();
       updateActiveSessionText(null);
       renderEntries([]);
+      renderSessions(currentSessions);
     };
 
-    const loadSessions = async () => {
+    const loadSessions = async (force = false) => {
       const sessions = await fetchJson(`${restUrl}/sessions`);
       renderSessions(sessions);
-      const selectedSession = activeSessionId ? sessions.find((session) => session.id === activeSessionId) : null;
+      const selectedSession = activeSessionId ? sessions.find((session) => Number(session.id) === Number(activeSessionId)) : null;
+      const openSession = sessions.find((session) => session.status === 'open') || null;
 
       if (selectedSession) {
-        await setActiveSession(selectedSession);
+        const changedSelection = stableStringify(selectedSession) !== stableStringify(currentSession);
+        await setActiveSession(selectedSession, { forceEntriesReload: force || changedSelection });
+        return;
+      }
+
+      if (!userDismissedActiveSession && openSession) {
+        await setActiveSession(openSession, { forceEntriesReload: force || true });
         return;
       }
 
       if (!userDismissedActiveSession) {
         updateActiveSessionText(null);
         renderEntries([]);
+      } else {
+        updateControlState(currentSession);
       }
     };
 
-    const applyLookupValue = (input, key, normalizedCallsign, value) => {
+    const applyLookupValue = (input, key, value) => {
       if (!value) {
         return;
       }
@@ -499,8 +629,6 @@
 
       setTrackedFieldValue(input, value);
       state.manual = false;
-      state.autoCallsign = normalizedCallsign;
-      state.autoValue = value;
     };
 
     const lookupCallsign = async () => {
@@ -519,21 +647,15 @@
           method: 'GET',
         });
 
-        if (
-          requestId !== lookupSequence ||
-          normalizeCallsign(callsignInput.value) !== normalizedCallsign ||
-          !result?.found
-        ) {
+        if (requestId !== lookupSequence || normalizeCallsign(callsignInput.value) !== normalizedCallsign || !result?.found) {
           return;
         }
 
-        applyLookupValue(firstNameInput, 'firstName', normalizedCallsign, result.first_name || '');
-        applyLookupValue(lastNameInput, 'lastName', normalizedCallsign, result.last_name || '');
-        applyLookupValue(locationInput, 'location', normalizedCallsign, result.location || '');
+        applyLookupValue(firstNameInput, 'firstName', result.first_name || '');
+        applyLookupValue(lastNameInput, 'lastName', result.last_name || '');
+        applyLookupValue(locationInput, 'location', result.location || '');
 
-        if (lookupStatusEl) {
-          lookupStatusEl.textContent = result.source === 'qrz' ? strings.lookupQrz : strings.lookupRoster;
-        }
+        lookupStatusEl.textContent = result.source === 'qrz' ? strings.lookupQrz : strings.lookupRoster;
       } catch (error) {
         clearLookupStatus();
       }
@@ -541,7 +663,10 @@
 
     const startSession = async () => {
       const netName = getSessionPreview();
-      if (!netName) {
+      if (!netName || startButton.disabled) {
+        if (startButton.disabled) {
+          setMessage(strings.startDisabled, 'error');
+        }
         return;
       }
 
@@ -561,8 +686,9 @@
         refreshSessionPreview();
 
         if (data.session) {
-          await setActiveSession(data.session);
-          await loadSessions();
+          await setActiveSession(data.session, { forceEntriesReload: true });
+          await loadSessions(true);
+          setMessage(strings.liveSessionInProgress, 'success');
         }
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
@@ -570,7 +696,7 @@
     };
 
     const addEntry = async () => {
-      if (!activeSessionId) {
+      if (!activeSessionId || currentSession?.status !== 'open') {
         setMessage(strings.selectSession, 'error');
         return;
       }
@@ -597,10 +723,38 @@
         });
 
         clearEntryInputs();
-        await loadEntries(activeSessionId);
+        await loadEntries(activeSessionId, true);
+        await loadSessions(true);
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }
+    };
+
+    const poll = async () => {
+      if (pollInFlight) {
+        return;
+      }
+
+      pollInFlight = true;
+
+      try {
+        await loadSessions(false);
+        if (activeSessionId) {
+          await loadEntries(activeSessionId, false);
+        }
+      } catch (error) {
+        setMessage(error.message || strings.unableToLoadSessions, 'error');
+      } finally {
+        pollInFlight = false;
+      }
+    };
+
+    const startPolling = () => {
+      if (pollingHandle) {
+        window.clearInterval(pollingHandle);
+      }
+
+      pollingHandle = window.setInterval(poll, pollInterval);
     };
 
     sessionTypeInputs.forEach((input) => {
@@ -622,13 +776,7 @@
         return;
       }
 
-      const state = fieldState[key];
-      state.manual = true;
-
-      if (input.value.trim() === '') {
-        state.autoCallsign = '';
-        state.autoValue = '';
-      }
+      fieldState[key].manual = input.value.trim() !== '';
     };
 
     firstNameInput.addEventListener('input', () => {
@@ -643,14 +791,8 @@
       markFieldAsManual('location', locationInput);
     });
 
-    callsignInput.addEventListener('input', () => {
-      clearLookupStatus();
-    });
-
-    callsignInput.addEventListener('blur', () => {
-      lookupCallsign();
-    });
-
+    callsignInput.addEventListener('input', clearLookupStatus);
+    callsignInput.addEventListener('blur', lookupCallsign);
     callsignInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -671,7 +813,7 @@
     });
 
     closeSessionButton.addEventListener('click', async () => {
-      if (!activeSessionId) {
+      if (!activeSessionId || currentSession?.status !== 'open') {
         return;
       }
 
@@ -681,16 +823,19 @@
           method: 'POST',
         });
 
+        setMessage(strings.sessionClosed, 'success');
         resetActiveSession();
-        await loadSessions();
+        await loadSessions(true);
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }
     });
 
     refreshSessionPreview();
+    updateControlState(null);
+    startPolling();
 
-    loadSessions().catch((error) => {
+    loadSessions(true).catch((error) => {
       setMessage(error.message || strings.unableToLoadSessions, 'error');
       sessionsList.innerHTML = `<li class="netctrl-list__empty">${strings.unableToLoadSessions}</li>`;
       updateActiveSessionText(null);
