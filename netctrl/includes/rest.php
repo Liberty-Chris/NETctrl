@@ -70,6 +70,24 @@ function netctrl_register_routes()
                     'required' => false,
                     'sanitize_callback' => 'sanitize_textarea_field',
                 ),
+                'checkin_type' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'has_announcement' => array(
+                    'required' => false,
+                ),
+                'has_traffic' => array(
+                    'required' => false,
+                ),
+                'announcement_details' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_textarea_field',
+                ),
+                'traffic_details' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_textarea_field',
+                ),
             ),
         ),
     ));
@@ -93,6 +111,24 @@ function netctrl_register_routes()
                     'sanitize_callback' => 'sanitize_text_field',
                 ),
                 'comments' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_textarea_field',
+                ),
+                'checkin_type' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'has_announcement' => array(
+                    'required' => false,
+                ),
+                'has_traffic' => array(
+                    'required' => false,
+                ),
+                'announcement_details' => array(
+                    'required' => false,
+                    'sanitize_callback' => 'sanitize_textarea_field',
+                ),
+                'traffic_details' => array(
                     'required' => false,
                     'sanitize_callback' => 'sanitize_textarea_field',
                 ),
@@ -236,11 +272,37 @@ function netctrl_rest_lookup_callsign(WP_REST_Request $request)
 function netctrl_rest_prepare_entry_payload(WP_REST_Request $request)
 {
     $callsign = netctrl_normalize_callsign($request->get_param('callsign'));
+    $checkin_type = netctrl_normalize_checkin_type($request->get_param('checkin_type'));
+    $has_announcement = rest_sanitize_boolean($request->get_param('has_announcement'));
+    $has_traffic = rest_sanitize_boolean($request->get_param('has_traffic'));
+    $announcement_details = trim((string) $request->get_param('announcement_details'));
+    $traffic_details = trim((string) $request->get_param('traffic_details'));
+
+    if ($checkin_type !== 'regular') {
+        $has_announcement = false;
+        $has_traffic = false;
+        $announcement_details = '';
+        $traffic_details = '';
+    } else {
+        if (!$has_announcement) {
+            $announcement_details = '';
+        }
+
+        if (!$has_traffic) {
+            $traffic_details = '';
+        }
+    }
+
     $entry = array(
         'callsign' => $callsign,
         'name' => $request->get_param('name'),
         'location' => $request->get_param('location'),
         'comments' => $request->get_param('comments'),
+        'checkin_type' => $checkin_type,
+        'has_announcement' => $has_announcement,
+        'has_traffic' => $has_traffic,
+        'announcement_details' => $announcement_details,
+        'traffic_details' => $traffic_details,
     );
 
     if (empty($entry['name']) || empty($entry['location'])) {

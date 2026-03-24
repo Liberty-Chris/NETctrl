@@ -18,12 +18,16 @@ NETctrl focuses on practical, day-to-day net operations with a clean workflow fo
 - Session creation and management from a single interface.
 - Structured session naming for consistent logs.
 - Check-in logging for stations as they join the net.
+- Structured check-in workflow with check-in type, announcement and traffic tracking.
 - Entry editing and deletion when corrections are needed.
 - Recent sessions view for quick follow-up and review.
 - Session audit notes that show who created, edited, and closed sessions.
 - Admin-managed roster with callsign-based auto population.
 - QRZ fallback lookup for non-roster callsigns when enabled.
 - Role-based access using WordPress users and permissions.
+- Public sessions page with live + recent closed visibility, expand/collapse cards, and closed-session PDF links.
+- Downloadable PDF session logs with formatted entry output.
+- Polling-based live updates in both operator and public views.
 
 ## Interface Overview
 
@@ -154,9 +158,70 @@ Displays the authenticated NETctrl operator console. This is the main interface 
 - review recent sessions
 - close a session
 
+### Entry workflow
+
+The entry workflow supports both very fast check-ins and fuller traffic/announcement tracking.
+
+- **Check-in Type** options:
+  - **Short Time / No Traffic** - optimized for quick logging and hides extra detail fields.
+  - **Regular** - enables additional traffic/announcement controls.
+- For **Regular** entries, operators can set:
+  - **Announcement** checkbox
+  - **Traffic** checkbox
+- Conditional detail fields are shown only when needed:
+  - If Announcement is checked, **Announcement Details** appears.
+  - If Traffic is checked, **Traffic Details** appears.
+  - If both are checked, both detail fields are shown.
+  - If neither is checked, the entry is still valid and no extra detail fields are shown.
+- Legacy comment values remain displayable for older entries so historical logs stay readable.
+
 ### `[netctrl_log id="123"]`
 
 Displays a session log for a specific session ID. This can be used for public or internal log pages, and users with NETctrl access can also use the available PDF download link for that session.
+
+### `[netctrl_public_sessions]`
+
+Displays a public view of current live sessions and recent closed sessions.
+
+- Session cards are collapsed by default and can be expanded/collapsed on demand.
+- Live sessions are visible in the live section and refresh automatically.
+- Closed sessions include a **Download PDF** button when available.
+
+## Public sessions page behavior
+
+The public sessions page is designed for clarity and safe read-only visibility.
+
+- Live sessions and recent closed sessions are shown in separate panels.
+- Each entry displays structured check-in data:
+  - Check-in Type
+  - Announcement (when present)
+  - Traffic (when present)
+- Announcement and traffic details are shown in distinct labeled lines rather than a single merged text block.
+- Closed sessions expose PDF download links.
+- Session cards support expand/collapse interactions to keep the page compact.
+
+## PDF export
+
+NETctrl provides downloadable PDF logs for closed sessions.
+
+- PDF exports are available from session links and from public closed-session cards.
+- Output includes structured check-in fields (type, announcement, traffic, and legacy comments when present).
+- Formatting uses wrapped table cells with spacing designed to avoid clipping/overflow.
+
+## Session behavior and activation rules
+
+Session state is explicit and avoids false-positive live indicators.
+
+- A session must be created before it is considered active.
+- On load, the console does not incorrectly present a non-existent session as live.
+- Active state and controls are tied to the actual open/closed status.
+
+## Live updates
+
+NETctrl uses polling-based updates for active session visibility.
+
+- Operator console polls for live session + entry updates during operations.
+- Public session views poll for live updates and refresh open/closed session cards automatically.
 
 ## Roles and access
 

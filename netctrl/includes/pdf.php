@@ -62,17 +62,33 @@ function netctrl_generate_session_pdf($session_id)
         $lines[] = 'No entries recorded.';
     } else {
         $table_rows = array(
-            array('Time', 'Callsign', 'Name', 'Location', 'Comments'),
+            array('Time', 'Callsign', 'Name', 'Location', 'Check-in Details'),
         );
 
         foreach ($entries as $entry) {
             $prepared_entry = netctrl_prepare_entry_for_response($entry);
+            $checkin_lines = array(
+                'Type: ' . ($prepared_entry['checkin_type'] === 'regular' ? 'Regular' : 'Short Time / No Traffic'),
+            );
+
+            if (!empty($prepared_entry['has_announcement'])) {
+                $checkin_lines[] = 'Announcement: ' . (($prepared_entry['announcement_details'] ?? '') !== '' ? $prepared_entry['announcement_details'] : 'Yes');
+            }
+
+            if (!empty($prepared_entry['has_traffic'])) {
+                $checkin_lines[] = 'Traffic: ' . (($prepared_entry['traffic_details'] ?? '') !== '' ? $prepared_entry['traffic_details'] : 'Yes');
+            }
+
+            if (!empty($prepared_entry['legacy_comments'])) {
+                $checkin_lines[] = 'Legacy Comments: ' . $prepared_entry['legacy_comments'];
+            }
+
             $table_rows[] = array(
                 $prepared_entry['created_at'] ?: '—',
                 $prepared_entry['callsign'] ?: '—',
                 $prepared_entry['name'] ?: '—',
                 $prepared_entry['location'] ?: '—',
-                preg_replace('/\s+/', ' ', (string) ($prepared_entry['comments'] ?? '')) ?: '—',
+                implode(' | ', $checkin_lines),
             );
         }
 
@@ -121,7 +137,7 @@ function netctrl_build_simple_pdf(array $lines)
 
 function netctrl_build_pdf_table_lines(array $rows)
 {
-    $column_widths = array(15, 11, 16, 16, 31);
+    $column_widths = array(12, 10, 13, 13, 41);
     $table_lines = array();
     $separator = netctrl_build_pdf_table_separator($column_widths);
     $table_lines[] = $separator;

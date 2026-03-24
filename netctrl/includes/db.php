@@ -41,6 +41,11 @@ function netctrl_install_tables()
         callsign VARCHAR(50) NOT NULL,
         name VARCHAR(190) NULL,
         location VARCHAR(190) NULL,
+        checkin_type VARCHAR(30) NOT NULL DEFAULT 'short_time_no_traffic',
+        has_announcement TINYINT(1) NOT NULL DEFAULT 0,
+        has_traffic TINYINT(1) NOT NULL DEFAULT 0,
+        announcement_details TEXT NULL,
+        traffic_details TEXT NULL,
         comments TEXT NULL,
         created_at DATETIME NOT NULL,
         PRIMARY KEY  (id),
@@ -546,10 +551,15 @@ function netctrl_add_entry($session_id, array $entry)
             'callsign' => $entry['callsign'],
             'name' => $entry['name'],
             'location' => $entry['location'],
+            'checkin_type' => $entry['checkin_type'],
+            'has_announcement' => !empty($entry['has_announcement']) ? 1 : 0,
+            'has_traffic' => !empty($entry['has_traffic']) ? 1 : 0,
+            'announcement_details' => $entry['announcement_details'],
+            'traffic_details' => $entry['traffic_details'],
             'comments' => $entry['comments'],
             'created_at' => current_time('mysql'),
         ),
-        array('%d', '%s', '%s', '%s', '%s', '%s')
+        array('%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s')
     );
 
     if ($wpdb->insert_id) {
@@ -571,10 +581,15 @@ function netctrl_update_entry($entry_id, array $entry)
             'callsign' => $entry['callsign'],
             'name' => $entry['name'],
             'location' => $entry['location'],
+            'checkin_type' => $entry['checkin_type'],
+            'has_announcement' => !empty($entry['has_announcement']) ? 1 : 0,
+            'has_traffic' => !empty($entry['has_traffic']) ? 1 : 0,
+            'announcement_details' => $entry['announcement_details'],
+            'traffic_details' => $entry['traffic_details'],
             'comments' => $entry['comments'],
         ),
         array('id' => $entry_id),
-        array('%s', '%s', '%s', '%s'),
+        array('%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s'),
         array('%d')
     );
 

@@ -16,7 +16,7 @@ define('NETCTRL_VERSION', '0.9.0-beta.2');
 define('NETCTRL_PATH', plugin_dir_path(__FILE__));
 define('NETCTRL_URL', plugin_dir_url(__FILE__));
 
-define('NETCTRL_DB_VERSION', '0.9.0');
+define('NETCTRL_DB_VERSION', '0.9.1');
 
 require_once NETCTRL_PATH . 'includes/db.php';
 require_once NETCTRL_PATH . 'includes/capabilities.php';

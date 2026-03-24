@@ -26,6 +26,13 @@
     monitoringLive: 'Polling live updates every few seconds.',
     statusLive: 'Live',
     statusClosed: 'Closed',
+    checkinTypeShort: 'Short Time / No Traffic',
+    checkinTypeRegular: 'Regular',
+    announcementLabel: 'Announcement',
+    trafficLabel: 'Traffic',
+    announcementDetailsLabel: 'Announcement Details',
+    trafficDetailsLabel: 'Traffic Details',
+    legacyCommentsLabel: 'Legacy Comments',
     ...(config.strings || {}),
   };
 
@@ -88,7 +95,12 @@
     const firstNameInput = root.querySelector('#netctrl-first-name');
     const lastNameInput = root.querySelector('#netctrl-last-name');
     const locationInput = root.querySelector('#netctrl-location');
-    const commentsInput = root.querySelector('#netctrl-comments');
+    const checkinTypeInput = root.querySelector('#netctrl-checkin-type');
+    const regularFieldsWrap = root.querySelector('#netctrl-regular-fields');
+    const hasAnnouncementInput = root.querySelector('#netctrl-has-announcement');
+    const hasTrafficInput = root.querySelector('#netctrl-has-traffic');
+    const announcementDetailsInput = root.querySelector('#netctrl-announcement-details');
+    const trafficDetailsInput = root.querySelector('#netctrl-traffic-details');
     const lookupStatusEl = root.querySelector('#netctrl-lookup-status');
     const startButton = root.querySelector('#netctrl-start-session');
     const addEntryButton = root.querySelector('#netctrl-add-entry');
@@ -112,7 +124,12 @@
       !firstNameInput ||
       !lastNameInput ||
       !locationInput ||
-      !commentsInput ||
+      !checkinTypeInput ||
+      !regularFieldsWrap ||
+      !hasAnnouncementInput ||
+      !hasTrafficInput ||
+      !announcementDetailsInput ||
+      !trafficDetailsInput ||
       !startPanel ||
       !startStatusEl ||
       !startNoteEl ||
@@ -207,7 +224,12 @@
       setTrackedFieldValue(firstNameInput, '');
       setTrackedFieldValue(lastNameInput, '');
       setTrackedFieldValue(locationInput, '');
-      commentsInput.value = '';
+      checkinTypeInput.value = 'short_time_no_traffic';
+      hasAnnouncementInput.checked = false;
+      hasTrafficInput.checked = false;
+      announcementDetailsInput.value = '';
+      trafficDetailsInput.value = '';
+      refreshCheckinForm();
       resetFieldState('firstName');
       resetFieldState('lastName');
       resetFieldState('location');
@@ -248,7 +270,7 @@
 
       addEntryButton.disabled = !isOpen;
       closeSessionButton.disabled = !isOpen;
-      [callsignInput, firstNameInput, lastNameInput, locationInput, commentsInput].forEach((input) => {
+      [callsignInput, firstNameInput, lastNameInput, locationInput, checkinTypeInput, hasAnnouncementInput, hasTrafficInput, announcementDetailsInput, trafficDetailsInput].forEach((input) => {
         input.disabled = !isOpen;
       });
 
@@ -349,6 +371,39 @@
       return cell;
     };
 
+    const createSummaryNode = (entry) => {
+      const node = document.createElement('div');
+      node.className = 'netctrl-checkin-summary';
+
+      const appendLine = (label, value) => {
+        const line = document.createElement('div');
+        const strong = document.createElement('strong');
+        strong.textContent = `${label}: `;
+        line.appendChild(strong);
+        line.appendChild(document.createTextNode(value));
+        node.appendChild(line);
+      };
+
+      appendLine('Type', entry.checkin_type === 'regular' ? strings.checkinTypeRegular : strings.checkinTypeShort);
+
+      if (entry.checkin_type === 'regular') {
+        if (entry.has_announcement) {
+          appendLine(strings.announcementLabel, (entry.announcement_details || '').trim() || 'Yes');
+        }
+
+        if (entry.has_traffic) {
+          appendLine(strings.trafficLabel, (entry.traffic_details || '').trim() || 'Yes');
+        }
+      }
+
+      const legacyComments = (entry.legacy_comments || entry.comments || '').trim();
+      if (legacyComments) {
+        appendLine(strings.legacyCommentsLabel, legacyComments);
+      }
+
+      return node;
+    };
+
     const createEditButton = (entry) => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -436,9 +491,66 @@
       locationEditor.type = 'text';
       locationEditor.value = entry.location || '';
 
-      const commentsEditor = document.createElement('input');
-      commentsEditor.type = 'text';
-      commentsEditor.value = entry.comments || '';
+      const checkinTypeEditor = document.createElement('select');
+      checkinTypeEditor.innerHTML = `
+        <option value="short_time_no_traffic">${strings.checkinTypeShort}</option>
+        <option value="regular">${strings.checkinTypeRegular}</option>
+      `;
+      checkinTypeEditor.value = entry.checkin_type === 'regular' ? 'regular' : 'short_time_no_traffic';
+
+      const regularToggles = document.createElement('div');
+      regularToggles.className = 'netctrl-inline-flags';
+
+      const announcementToggle = document.createElement('label');
+      announcementToggle.className = 'netctrl-entry-form__checkbox';
+      const announcementCheckbox = document.createElement('input');
+      announcementCheckbox.type = 'checkbox';
+      announcementCheckbox.checked = Boolean(entry.has_announcement);
+      const announcementLabel = document.createElement('span');
+      announcementLabel.textContent = strings.announcementLabel;
+      announcementToggle.appendChild(announcementCheckbox);
+      announcementToggle.appendChild(announcementLabel);
+
+      const trafficToggle = document.createElement('label');
+      trafficToggle.className = 'netctrl-entry-form__checkbox';
+      const trafficCheckbox = document.createElement('input');
+      trafficCheckbox.type = 'checkbox';
+      trafficCheckbox.checked = Boolean(entry.has_traffic);
+      const trafficLabel = document.createElement('span');
+      trafficLabel.textContent = strings.trafficLabel;
+      trafficToggle.appendChild(trafficCheckbox);
+      trafficToggle.appendChild(trafficLabel);
+
+      regularToggles.appendChild(announcementToggle);
+      regularToggles.appendChild(trafficToggle);
+
+      const announcementDetailsEditor = document.createElement('input');
+      announcementDetailsEditor.type = 'text';
+      announcementDetailsEditor.placeholder = strings.announcementDetailsLabel;
+      announcementDetailsEditor.value = entry.announcement_details || '';
+
+      const trafficDetailsEditor = document.createElement('input');
+      trafficDetailsEditor.type = 'text';
+      trafficDetailsEditor.placeholder = strings.trafficDetailsLabel;
+      trafficDetailsEditor.value = entry.traffic_details || '';
+
+      const detailsEditorWrap = document.createElement('div');
+      detailsEditorWrap.className = 'netctrl-inline-details';
+      detailsEditorWrap.appendChild(regularToggles);
+      detailsEditorWrap.appendChild(announcementDetailsEditor);
+      detailsEditorWrap.appendChild(trafficDetailsEditor);
+
+      const refreshInlineFields = () => {
+        const isRegular = checkinTypeEditor.value === 'regular';
+        regularToggles.hidden = !isRegular;
+        announcementDetailsEditor.hidden = !isRegular || !announcementCheckbox.checked;
+        trafficDetailsEditor.hidden = !isRegular || !trafficCheckbox.checked;
+      };
+
+      checkinTypeEditor.addEventListener('change', refreshInlineFields);
+      announcementCheckbox.addEventListener('change', refreshInlineFields);
+      trafficCheckbox.addEventListener('change', refreshInlineFields);
+      refreshInlineFields();
 
       const actions = document.createElement('div');
       actions.className = 'netctrl-entry-actions';
@@ -458,7 +570,12 @@
           callsign: normalizeCallsign(callsignEditor.value),
           name: nameEditor.value.trim(),
           location: locationEditor.value.trim(),
-          comments: commentsEditor.value.trim(),
+          checkin_type: checkinTypeEditor.value,
+          has_announcement: checkinTypeEditor.value === 'regular' ? announcementCheckbox.checked : false,
+          has_traffic: checkinTypeEditor.value === 'regular' ? trafficCheckbox.checked : false,
+          announcement_details: checkinTypeEditor.value === 'regular' && announcementCheckbox.checked ? announcementDetailsEditor.value.trim() : '',
+          traffic_details: checkinTypeEditor.value === 'regular' && trafficCheckbox.checked ? trafficDetailsEditor.value.trim() : '',
+          comments: entry.comments || '',
         };
 
         if (!payload.callsign) {
@@ -488,7 +605,7 @@
         renderEntries(currentEntries);
       });
 
-      [callsignEditor, nameEditor, locationEditor, commentsEditor].forEach((input) => {
+      [callsignEditor, nameEditor, locationEditor, checkinTypeEditor, announcementDetailsEditor, trafficDetailsEditor].forEach((input) => {
         input.addEventListener('keydown', (event) => {
           if (event.key === 'Enter') {
             event.preventDefault();
@@ -508,7 +625,7 @@
       row.appendChild(createCell(callsignEditor));
       row.appendChild(createCell(nameEditor));
       row.appendChild(createCell(locationEditor));
-      row.appendChild(createCell(commentsEditor));
+      row.appendChild(createCell(detailsEditorWrap));
       row.appendChild(createCell(actions, 'netctrl-entries-table__cell--actions'));
 
       return row;
@@ -545,7 +662,7 @@
         row.appendChild(createCell(entry.callsign));
         row.appendChild(createCell(entry.name));
         row.appendChild(createCell(entry.location));
-        row.appendChild(createCell(entry.comments));
+        row.appendChild(createCell(createSummaryNode(entry)));
         row.appendChild(createCell(actions, 'netctrl-entries-table__cell--actions'));
         entriesList.appendChild(row);
       });
@@ -709,7 +826,12 @@
         callsign: normalizeCallsign(callsignInput.value),
         name: [firstNameInput.value.trim(), lastNameInput.value.trim()].filter(Boolean).join(' '),
         location: locationInput.value.trim(),
-        comments: commentsInput.value.trim(),
+        checkin_type: checkinTypeInput.value,
+        has_announcement: checkinTypeInput.value === 'regular' ? hasAnnouncementInput.checked : false,
+        has_traffic: checkinTypeInput.value === 'regular' ? hasTrafficInput.checked : false,
+        announcement_details: checkinTypeInput.value === 'regular' && hasAnnouncementInput.checked ? announcementDetailsInput.value.trim() : '',
+        traffic_details: checkinTypeInput.value === 'regular' && hasTrafficInput.checked ? trafficDetailsInput.value.trim() : '',
+        comments: '',
       };
 
       if (!payload.callsign) {
@@ -807,7 +929,33 @@
     startButton.addEventListener('click', startSession);
     addEntryButton.addEventListener('click', addEntry);
 
-    [firstNameInput, lastNameInput, locationInput, commentsInput].forEach((input) => {
+    const refreshCheckinForm = () => {
+      const isRegular = checkinTypeInput.value === 'regular';
+      regularFieldsWrap.hidden = !isRegular;
+      announcementDetailsInput.hidden = !isRegular || !hasAnnouncementInput.checked;
+      trafficDetailsInput.hidden = !isRegular || !hasTrafficInput.checked;
+
+      if (!isRegular) {
+        hasAnnouncementInput.checked = false;
+        hasTrafficInput.checked = false;
+        announcementDetailsInput.value = '';
+        trafficDetailsInput.value = '';
+      } else {
+        if (!hasAnnouncementInput.checked) {
+          announcementDetailsInput.value = '';
+        }
+
+        if (!hasTrafficInput.checked) {
+          trafficDetailsInput.value = '';
+        }
+      }
+    };
+
+    checkinTypeInput.addEventListener('change', refreshCheckinForm);
+    hasAnnouncementInput.addEventListener('change', refreshCheckinForm);
+    hasTrafficInput.addEventListener('change', refreshCheckinForm);
+
+    [firstNameInput, lastNameInput, locationInput, announcementDetailsInput, trafficDetailsInput].forEach((input) => {
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
@@ -836,6 +984,7 @@
     });
 
     refreshSessionPreview();
+    refreshCheckinForm();
     updateControlState(null);
     startPolling();
 
