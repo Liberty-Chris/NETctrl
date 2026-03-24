@@ -92,7 +92,12 @@
       <article class="netctrl-public-session netctrl-public-session--${statusClass}" data-session-id="${session.id}">
         <div class="netctrl-public-session__header">
           <div>
-            <h3>${escapeHtml(session.net_name || '')}</h3>
+            <div class="netctrl-public-session__title-row">
+              <h3>${escapeHtml(session.net_name || '')}</h3>
+              <button type="button" class="button button-secondary netctrl-public-session__toggle" data-netctrl-session-toggle aria-expanded="${expanded ? 'true' : 'false'}">
+                ${escapeHtml(expanded ? strings.collapse : strings.expand)}
+              </button>
+            </div>
             <div class="netctrl-public-session__meta">
               <span>Status: ${escapeHtml(session.status_label || session.status || '')}</span>
               <span>Created: ${escapeHtml(session.created_at || session.started_at || '—')}</span>
@@ -103,9 +108,6 @@
         </div>
         <div class="netctrl-public-session__actions">
           ${pdfLink}
-          <button type="button" class="button button-secondary netctrl-public-session__toggle" data-netctrl-session-toggle aria-expanded="${expanded ? 'true' : 'false'}">
-            ${escapeHtml(expanded ? strings.collapse : strings.expand)}
-          </button>
         </div>
         <div class="netctrl-public-session__body" ${expanded ? '' : 'hidden'}>
           <div class="netctrl-public-session__description">${escapeHtml(session.status_description || strings.liveUpdates)}</div>

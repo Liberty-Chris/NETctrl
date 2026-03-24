@@ -3,6 +3,7 @@
   const restUrl = config.restUrl;
   const nonce = config.nonce;
   const pollInterval = Number(config.pollInterval) || 4000;
+  const canDeleteSessions = Boolean(config.canDeleteSessions);
   const strings = {
     unableToLoadSessions: 'Unable to load sessions.',
     unableToLoadEntries: 'Unable to load entries.',
@@ -23,9 +24,13 @@
     liveSessionInProgress: 'Live session in progress',
     startDisabled: 'Start Session is unavailable while another live session is open.',
     sessionClosed: 'Session closed.',
+    sessionReopened: 'Session reopened.',
     monitoringLive: 'Polling live updates every few seconds.',
     statusLive: 'Live',
     statusClosed: 'Closed',
+    reopenSession: 'Reopen Session',
+    deleteSession: 'Delete Session',
+    deleteSessionConfirm: 'Delete this session and all of its entries?',
     checkinTypeShort: 'Short Time / No Traffic',
     checkinTypeRegular: 'Regular',
     announcementLabel: 'Announcement',
@@ -105,6 +110,7 @@
     const startButton = root.querySelector('#netctrl-start-session');
     const addEntryButton = root.querySelector('#netctrl-add-entry');
     const closeSessionButton = root.querySelector('#netctrl-close-session');
+    const reopenSessionButton = root.querySelector('#netctrl-reopen-session');
     const startPanel = root.querySelector('[data-netctrl-start-panel]');
     const startStatusEl = root.querySelector('[data-netctrl-start-status]');
     const startNoteEl = root.querySelector('[data-netctrl-start-note]');
@@ -120,6 +126,7 @@
       !startButton ||
       !addEntryButton ||
       !closeSessionButton ||
+      !reopenSessionButton ||
       !callsignInput ||
       !firstNameInput ||
       !lastNameInput ||
@@ -259,6 +266,7 @@
     const updateControlState = (session) => {
       const hasLiveSession = currentSessions.some((item) => item.status === 'open');
       const isOpen = session?.status === 'open';
+      const isClosed = session?.status === 'closed';
 
       startButton.disabled = hasLiveSession;
       sessionTypeInputs.forEach((input) => {
@@ -270,6 +278,8 @@
 
       addEntryButton.disabled = !isOpen;
       closeSessionButton.disabled = !isOpen;
+      reopenSessionButton.disabled = !isClosed || hasLiveSession;
+      reopenSessionButton.hidden = !isClosed;
       [callsignInput, firstNameInput, lastNameInput, locationInput, checkinTypeInput, hasAnnouncementInput, hasTrafficInput, announcementDetailsInput, trafficDetailsInput].forEach((input) => {
         input.disabled = !isOpen;
       });
@@ -294,6 +304,41 @@
       activeSessionMetaEl.textContent = session
         ? (session.status_description || strings.monitoringLive)
         : strings.monitoringLive;
+    };
+
+    const reopenSession = async (session) => {
+      if (!session || session.status !== 'closed') {
+        return null;
+      }
+
+      const reopened = await fetchJson(`${restUrl}/sessions/${session.id}/reopen`, {
+        method: 'POST',
+      });
+
+      await setActiveSession(reopened, { forceEntriesReload: true });
+      await loadSessions(true);
+
+      return reopened;
+    };
+
+    const deleteSession = async (session) => {
+      if (!session || !canDeleteSessions) {
+        return;
+      }
+
+      if (!window.confirm(strings.deleteSessionConfirm)) {
+        return;
+      }
+
+      await fetchJson(`${restUrl}/sessions/${session.id}`, {
+        method: 'DELETE',
+      });
+
+      if (Number(activeSessionId) === Number(session.id)) {
+        resetActiveSession();
+      }
+
+      await loadSessions(true);
     };
 
     const renderSessions = (sessions) => {
@@ -334,6 +379,50 @@
         meta.className = 'netctrl-session-list__meta';
         meta.textContent = `${session.status_label || session.status} · ${session.status_description || ''}`;
         item.appendChild(meta);
+
+        const actions = document.createElement('div');
+        actions.className = 'netctrl-session-list__actions';
+
+        if (session.status === 'closed') {
+          const reopenButton = document.createElement('button');
+          reopenButton.type = 'button';
+          reopenButton.className = 'button button-small netctrl-session-list__action netctrl-session-list__action--reopen';
+          reopenButton.textContent = strings.reopenSession;
+          reopenButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+
+            try {
+              setMessage('');
+              await reopenSession(session);
+              setMessage(strings.sessionReopened, 'success');
+            } catch (error) {
+              setMessage(error.message || strings.requestFailed, 'error');
+            }
+          });
+          actions.appendChild(reopenButton);
+        }
+
+        if (canDeleteSessions) {
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'button button-small netctrl-session-list__action netctrl-session-list__action--delete';
+          deleteButton.textContent = strings.deleteSession;
+          deleteButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+
+            try {
+              setMessage('');
+              await deleteSession(session);
+            } catch (error) {
+              setMessage(error.message || strings.requestFailed, 'error');
+            }
+          });
+          actions.appendChild(deleteButton);
+        }
+
+        if (actions.children.length) {
+          item.appendChild(actions);
+        }
 
         if (auditLines.length) {
           const auditList = document.createElement('div');
@@ -686,9 +775,12 @@
     };
 
     const setActiveSession = async (session, options = {}) => {
+      const hasSessionChanged = Number(activeSessionId) !== Number(session.id);
       activeSessionId = session.id;
       userDismissedActiveSession = false;
-      editingEntryId = null;
+      if (hasSessionChanged) {
+        editingEntryId = null;
+      }
       updateActiveSessionText(session);
       await loadEntries(activeSessionId, Boolean(options.forceEntriesReload));
       renderSessions(currentSessions);
@@ -712,14 +804,10 @@
       const selectedSession = activeSessionId ? sessions.find((session) => Number(session.id) === Number(activeSessionId)) : null;
       const openSession = sessions.find((session) => session.status === 'open') || null;
 
-      if (selectedSession && selectedSession.status === 'open') {
+      if (selectedSession) {
         const changedSelection = stableStringify(selectedSession) !== stableStringify(currentSession);
         await setActiveSession(selectedSession, { forceEntriesReload: force || changedSelection });
         return;
-      }
-
-      if (selectedSession && selectedSession.status !== 'open') {
-        resetActiveSession();
       }
 
       if (!userDismissedActiveSession && openSession) {
@@ -978,6 +1066,20 @@
         setMessage(strings.sessionClosed, 'success');
         resetActiveSession();
         await loadSessions(true);
+      } catch (error) {
+        setMessage(error.message || strings.requestFailed, 'error');
+      }
+    });
+
+    reopenSessionButton.addEventListener('click', async () => {
+      if (!currentSession || currentSession.status !== 'closed') {
+        return;
+      }
+
+      try {
+        setMessage('');
+        await reopenSession(currentSession);
+        setMessage(strings.sessionReopened, 'success');
       } catch (error) {
         setMessage(error.message || strings.requestFailed, 'error');
       }

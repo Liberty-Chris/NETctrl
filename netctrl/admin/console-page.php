@@ -38,6 +38,7 @@ function netctrl_enqueue_console_assets()
         'restUrl' => esc_url_raw(rest_url('netctrl/v1')),
         'nonce' => wp_create_nonce('wp_rest'),
         'pollInterval' => 4000,
+        'canDeleteSessions' => current_user_can('manage_options'),
         'strings' => array(
             'unableToLoadSessions' => __('Unable to load sessions.', 'netctrl'),
             'unableToLoadEntries' => __('Unable to load entries.', 'netctrl'),
@@ -58,9 +59,13 @@ function netctrl_enqueue_console_assets()
             'liveSessionInProgress' => __('Live session in progress', 'netctrl'),
             'startDisabled' => __('Start Session is unavailable while another live session is open.', 'netctrl'),
             'sessionClosed' => __('Session closed.', 'netctrl'),
+            'sessionReopened' => __('Session reopened.', 'netctrl'),
             'monitoringLive' => __('Polling live updates every few seconds.', 'netctrl'),
             'statusLive' => __('Live', 'netctrl'),
             'statusClosed' => __('Closed', 'netctrl'),
+            'reopenSession' => __('Reopen Session', 'netctrl'),
+            'deleteSession' => __('Delete Session', 'netctrl'),
+            'deleteSessionConfirm' => __('Delete this session and all of its entries?', 'netctrl'),
             'checkinTypeShort' => __('Short Time / No Traffic', 'netctrl'),
             'checkinTypeRegular' => __('Regular', 'netctrl'),
             'announcementLabel' => __('Announcement', 'netctrl'),
@@ -187,6 +192,7 @@ function netctrl_get_console_markup($is_frontend = false)
                     <div class="netctrl-entry-form__lookup-note" id="netctrl-lookup-status" aria-live="polite"></div>
                     <div class="netctrl-entry-form__actions">
                         <button type="button" class="button button-primary" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
+                        <button type="button" class="button" id="netctrl-reopen-session"><?php esc_html_e('Reopen Session', 'netctrl'); ?></button>
                         <button type="button" class="button" id="netctrl-close-session"><?php esc_html_e('Close Session', 'netctrl'); ?></button>
                     </div>
                 </div>
