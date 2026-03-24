@@ -44,55 +44,32 @@ function netctrl_generate_session_pdf($session_id)
 
     $entries = netctrl_get_entries($session_id);
     $prepared_session = netctrl_prepare_session_for_response($session);
-    $lines = array(
-        'NETctrl / JCARA Session Log',
-        'Session: ' . ($prepared_session['net_name'] ?? ''),
-        'Status: ' . ($prepared_session['status_label'] ?? ''),
-        'Created: ' . ($prepared_session['created_at'] ?: ($prepared_session['started_at'] ?? '')),
+    $lines = array_merge(
+        array('NETctrl / JCARA Session Log'),
+        netctrl_build_pdf_kv_block(array(
+            __('Session', 'netctrl') => ($prepared_session['net_name'] ?? ''),
+            __('Status', 'netctrl') => ($prepared_session['status_label'] ?? ''),
+            __('Created', 'netctrl') => ($prepared_session['created_at'] ?: ($prepared_session['started_at'] ?? '')),
+        ))
     );
 
     if (!empty($prepared_session['closed_at'])) {
-        $lines[] = 'Closed: ' . $prepared_session['closed_at'];
+        $lines = array_merge($lines, netctrl_build_pdf_kv_block(array(
+            __('Closed', 'netctrl') => $prepared_session['closed_at'],
+        )));
     }
 
     $lines[] = '';
-    $lines[] = 'Entries';
+    $lines[] = __('Entries', 'netctrl');
+    $lines[] = str_repeat('=', 94);
 
     if (!$entries) {
         $lines[] = 'No entries recorded.';
     } else {
-        $table_rows = array(
-            array('Time', 'Callsign', 'Name', 'Location', 'Check-in Details'),
-        );
-
-        foreach ($entries as $entry) {
+        foreach ($entries as $index => $entry) {
             $prepared_entry = netctrl_prepare_entry_for_response($entry);
-            $checkin_lines = array(
-                'Type: ' . ($prepared_entry['checkin_type'] === 'regular' ? 'Regular' : 'Short Time / No Traffic'),
-            );
-
-            if (!empty($prepared_entry['has_announcement'])) {
-                $checkin_lines[] = 'Announcement: ' . (($prepared_entry['announcement_details'] ?? '') !== '' ? $prepared_entry['announcement_details'] : 'Yes');
-            }
-
-            if (!empty($prepared_entry['has_traffic'])) {
-                $checkin_lines[] = 'Traffic: ' . (($prepared_entry['traffic_details'] ?? '') !== '' ? $prepared_entry['traffic_details'] : 'Yes');
-            }
-
-            if (!empty($prepared_entry['legacy_comments'])) {
-                $checkin_lines[] = 'Legacy Comments: ' . $prepared_entry['legacy_comments'];
-            }
-
-            $table_rows[] = array(
-                $prepared_entry['created_at'] ?: '—',
-                $prepared_entry['callsign'] ?: '—',
-                $prepared_entry['name'] ?: '—',
-                $prepared_entry['location'] ?: '—',
-                implode(' | ', $checkin_lines),
-            );
+            $lines = array_merge($lines, netctrl_build_pdf_entry_card_lines($prepared_entry, $index + 1));
         }
-
-        $lines = array_merge($lines, netctrl_build_pdf_table_lines($table_rows));
     }
 
     return netctrl_build_simple_pdf($lines);
@@ -135,56 +112,89 @@ function netctrl_build_simple_pdf(array $lines)
     return netctrl_render_pdf_objects($objects);
 }
 
-function netctrl_build_pdf_table_lines(array $rows)
+function netctrl_build_pdf_kv_block(array $values)
 {
-    $column_widths = array(12, 10, 13, 13, 41);
-    $table_lines = array();
-    $separator = netctrl_build_pdf_table_separator($column_widths);
-    $table_lines[] = $separator;
+    $lines = array();
 
-    foreach ($rows as $index => $row) {
-        $wrapped_columns = array();
-        $max_lines = 1;
+    foreach ($values as $label => $value) {
+        $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines((string) $label, (string) $value, 84));
+    }
 
-        foreach ($column_widths as $column_index => $width) {
-            $value = netctrl_normalize_pdf_cell_value($row[$column_index] ?? '—');
-            $wrapped_columns[$column_index] = netctrl_wrap_pdf_text($value, $width);
-            $max_lines = max($max_lines, count($wrapped_columns[$column_index]));
-        }
+    return $lines;
+}
 
-        for ($line_index = 0; $line_index < $max_lines; $line_index++) {
-            $line = '|';
-            foreach ($column_widths as $column_index => $width) {
-                $chunk = $wrapped_columns[$column_index][$line_index] ?? '';
-                $line .= ' ' . str_pad($chunk, $width, ' ', STR_PAD_RIGHT) . ' |';
-            }
-            $table_lines[] = rtrim($line);
-        }
+function netctrl_build_pdf_entry_card_lines(array $entry, $entry_number)
+{
+    $title = sprintf(
+        '#%d  %s  %s',
+        (int) $entry_number,
+        $entry['callsign'] ?: '—',
+        $entry['created_at'] ?: '—'
+    );
+    $lines = array(str_repeat('-', 94));
+    $lines = array_merge($lines, netctrl_wrap_pdf_text($title, 94));
+    $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines(__('Name', 'netctrl'), $entry['name'] ?: '—', 86));
+    $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines(__('Location', 'netctrl'), $entry['location'] ?: '—', 82));
+    $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines(__('Type', 'netctrl'), $entry['checkin_type'] === 'regular' ? __('Regular', 'netctrl') : __('Short Time / No Traffic', 'netctrl'), 86));
 
+    if (!empty($entry['has_announcement'])) {
+        $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines(
+            __('Announcement', 'netctrl'),
+            (($entry['announcement_details'] ?? '') !== '' ? $entry['announcement_details'] : 'Yes'),
+            78
+        ));
+    }
+
+    if (!empty($entry['has_traffic'])) {
+        $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines(
+            __('Traffic', 'netctrl'),
+            (($entry['traffic_details'] ?? '') !== '' ? $entry['traffic_details'] : 'Yes'),
+            83
+        ));
+    }
+
+    if (!empty($entry['legacy_comments'])) {
+        $lines = array_merge($lines, netctrl_build_pdf_wrapped_field_lines(__('Legacy Comments', 'netctrl'), $entry['legacy_comments'], 74));
+    }
+
+    return array_merge($lines, array(''));
+}
+
+function netctrl_build_pdf_wrapped_field_lines($label, $value, $first_line_width)
+{
+    $label = trim((string) $label);
+    $value = netctrl_normalize_pdf_cell_value($value);
+
+    $prefix = $label . ': ';
+    $first_width = max(10, (int) $first_line_width);
+    $next_width = 88;
+    $chunks = netctrl_wrap_pdf_text($value, $first_width);
+    $lines = array();
+
+    foreach ($chunks as $index => $chunk) {
         if ($index === 0) {
-            $table_lines[] = $separator;
+            $lines[] = $prefix . $chunk;
+        } else {
+            foreach (netctrl_wrap_pdf_text($chunk, $next_width) as $continuation_line) {
+                $lines[] = str_repeat(' ', strlen($prefix)) . $continuation_line;
+            }
         }
     }
 
-    $table_lines[] = $separator;
-
-    return $table_lines;
-}
-
-function netctrl_build_pdf_table_separator(array $column_widths)
-{
-    $parts = array_map(function ($width) {
-        return str_repeat('-', $width + 2);
-    }, $column_widths);
-
-    return '+' . implode('+', $parts) . '+';
+    return $lines;
 }
 
 function netctrl_normalize_pdf_cell_value($value)
 {
-    $normalized = preg_replace('/\s+/', ' ', (string) $value);
+    $text = str_replace(array("\r\n", "\r"), "\n", (string) $value);
+    $lines = explode("\n", $text);
+    $normalized_lines = array();
 
-    return trim((string) $normalized);
+    foreach ($lines as $line) {
+        $normalized_lines[] = trim((string) preg_replace('/\s+/', ' ', $line));
+    }
+
+    return trim(implode("\n", $normalized_lines));
 }
 
 function netctrl_wrap_pdf_text($text, $width)
@@ -197,10 +207,23 @@ function netctrl_wrap_pdf_text($text, $width)
         return array('—');
     }
 
-    $wrapped = wordwrap($text, $width, "\n", true);
-    $lines = explode("\n", (string) $wrapped);
+    $source_lines = explode("\n", (string) $text);
+    $wrapped_lines = array();
 
-    return $lines ?: array('—');
+    foreach ($source_lines as $source_line) {
+        if ($source_line === '') {
+            $wrapped_lines[] = '';
+            continue;
+        }
+
+        $wrapped = wordwrap($source_line, $width, "\n", true);
+        $wrapped_parts = explode("\n", (string) $wrapped);
+        foreach ($wrapped_parts as $part) {
+            $wrapped_lines[] = $part;
+        }
+    }
+
+    return $wrapped_lines ?: array('—');
 }
 
 function netctrl_build_pdf_page_stream(array $lines, $font_size, $line_height)

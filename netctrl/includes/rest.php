@@ -33,12 +33,25 @@ function netctrl_register_routes()
             'callback' => 'netctrl_rest_get_session',
             'permission_callback' => 'netctrl_rest_require_auth',
         ),
+        array(
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => 'netctrl_rest_delete_session',
+            'permission_callback' => 'netctrl_rest_require_admin',
+        ),
     ));
 
     register_rest_route('netctrl/v1', '/sessions/(?P<id>\d+)/close', array(
         array(
             'methods' => WP_REST_Server::CREATABLE,
             'callback' => 'netctrl_rest_close_session',
+            'permission_callback' => 'netctrl_rest_require_auth',
+        ),
+    ));
+
+    register_rest_route('netctrl/v1', '/sessions/(?P<id>\d+)/reopen', array(
+        array(
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => 'netctrl_rest_reopen_session',
             'permission_callback' => 'netctrl_rest_require_auth',
         ),
     ));
@@ -169,6 +182,11 @@ function netctrl_rest_require_auth()
     return current_user_can('run_net');
 }
 
+function netctrl_rest_require_admin()
+{
+    return current_user_can('manage_options');
+}
+
 function netctrl_rest_list_sessions()
 {
     $sessions = array_map('netctrl_prepare_session_for_response', netctrl_get_sessions());
@@ -207,6 +225,34 @@ function netctrl_rest_close_session(WP_REST_Request $request)
     netctrl_close_session($session_id);
 
     return rest_ensure_response(netctrl_prepare_session_for_response(netctrl_get_session($session_id)));
+}
+
+function netctrl_rest_reopen_session(WP_REST_Request $request)
+{
+    $session_id = (int) $request['id'];
+    $result = netctrl_reopen_session($session_id);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    return rest_ensure_response(netctrl_prepare_session_for_response(netctrl_get_session($session_id)));
+}
+
+function netctrl_rest_delete_session(WP_REST_Request $request)
+{
+    $session_id = (int) $request['id'];
+    $result = netctrl_delete_session($session_id);
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    return rest_ensure_response(array(
+        'deleted' => true,
+        'id' => (int) $result['id'],
+        'entries_deleted' => (int) $result['entries_deleted'],
+    ));
 }
 
 function netctrl_rest_list_entries(WP_REST_Request $request)

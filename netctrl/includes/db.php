@@ -428,11 +428,16 @@ function netctrl_get_current_open_session()
     return $sessions ? $sessions[0] : null;
 }
 
+function netctrl_get_current_utc_mysql()
+{
+    return current_time('mysql', true);
+}
+
 function netctrl_create_session($net_name)
 {
     global $wpdb;
     $table = netctrl_get_table('sessions');
-    $timestamp = current_time('mysql');
+    $timestamp = netctrl_get_current_utc_mysql();
     $user_id = get_current_user_id();
     $existing_open_session = netctrl_get_current_open_session();
 
@@ -463,7 +468,7 @@ function netctrl_close_session($session_id)
 {
     global $wpdb;
     $table = netctrl_get_table('sessions');
-    $timestamp = current_time('mysql');
+    $timestamp = netctrl_get_current_utc_mysql();
     $user_id = get_current_user_id();
 
     return $wpdb->update(
@@ -481,12 +486,93 @@ function netctrl_close_session($session_id)
     );
 }
 
+function netctrl_reopen_session($session_id)
+{
+    global $wpdb;
+    $table = netctrl_get_table('sessions');
+    $timestamp = netctrl_get_current_utc_mysql();
+    $user_id = get_current_user_id();
+    $session = netctrl_get_session($session_id);
+
+    if (!$session) {
+        return new WP_Error('netctrl_not_found', __('Session not found.', 'netctrl'), array('status' => 404));
+    }
+
+    $existing_open_session = netctrl_get_current_open_session();
+    if ($existing_open_session && (int) $existing_open_session['id'] !== (int) $session_id) {
+        return new WP_Error('netctrl_session_already_open', __('A live session is already in progress.', 'netctrl'), array('status' => 409));
+    }
+
+    $updated = $wpdb->update(
+        $table,
+        array(
+            'status' => 'open',
+            'closed_at' => null,
+            'closed_by' => null,
+            'updated_at' => $timestamp,
+            'updated_by' => $user_id ?: null,
+        ),
+        array('id' => $session_id),
+        array('%s', '%s', '%d', '%s', '%d'),
+        array('%d')
+    );
+
+    if ($updated === false) {
+        return new WP_Error('netctrl_session_reopen_failed', __('Unable to reopen the session.', 'netctrl'));
+    }
+
+    return true;
+}
+
+function netctrl_delete_session($session_id)
+{
+    global $wpdb;
+    $sessions_table = netctrl_get_table('sessions');
+    $entries_table = netctrl_get_table('entries');
+    $session = netctrl_get_session($session_id);
+
+    if (!$session) {
+        return new WP_Error('netctrl_not_found', __('Session not found.', 'netctrl'), array('status' => 404));
+    }
+
+    $wpdb->query('START TRANSACTION');
+
+    $entries_deleted = $wpdb->delete(
+        $entries_table,
+        array('session_id' => $session_id),
+        array('%d')
+    );
+
+    if ($entries_deleted === false) {
+        $wpdb->query('ROLLBACK');
+        return new WP_Error('netctrl_session_entries_delete_failed', __('Unable to delete session entries.', 'netctrl'));
+    }
+
+    $session_deleted = $wpdb->delete(
+        $sessions_table,
+        array('id' => $session_id),
+        array('%d')
+    );
+
+    if ($session_deleted === false || $session_deleted < 1) {
+        $wpdb->query('ROLLBACK');
+        return new WP_Error('netctrl_session_delete_failed', __('Unable to delete session.', 'netctrl'));
+    }
+
+    $wpdb->query('COMMIT');
+
+    return array(
+        'id' => (int) $session_id,
+        'entries_deleted' => (int) $entries_deleted,
+    );
+}
+
 function netctrl_touch_session($session_id)
 {
     global $wpdb;
 
     $table = netctrl_get_table('sessions');
-    $timestamp = current_time('mysql');
+    $timestamp = netctrl_get_current_utc_mysql();
     $user_id = get_current_user_id();
 
     return $wpdb->update(
@@ -557,7 +643,7 @@ function netctrl_add_entry($session_id, array $entry)
             'announcement_details' => $entry['announcement_details'],
             'traffic_details' => $entry['traffic_details'],
             'comments' => $entry['comments'],
-            'created_at' => current_time('mysql'),
+            'created_at' => netctrl_get_current_utc_mysql(),
         ),
         array('%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s')
     );

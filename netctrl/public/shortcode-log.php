@@ -163,7 +163,17 @@ function netctrl_render_public_session_card(array $session, $single = false)
     <article class="netctrl-public-session netctrl-public-session--<?php echo esc_attr($status_class); ?><?php echo $single ? ' netctrl-public-session--single' : ''; ?>" data-session-id="<?php echo esc_attr($session['id']); ?>">
         <div class="netctrl-public-session__header">
             <div>
-                <h3><?php echo esc_html($session['net_name']); ?></h3>
+                <div class="netctrl-public-session__title-row">
+                    <h3><?php echo esc_html($session['net_name']); ?></h3>
+                    <button
+                        type="button"
+                        class="button button-secondary netctrl-public-session__toggle"
+                        data-netctrl-session-toggle
+                        aria-expanded="false"
+                    >
+                        <?php esc_html_e('Expand', 'netctrl'); ?>
+                    </button>
+                </div>
                 <div class="netctrl-public-session__meta">
                     <span><?php esc_html_e('Status', 'netctrl'); ?>: <?php echo esc_html($session['status_label']); ?></span>
                     <?php if (!empty($session['created_at'])) : ?>
@@ -185,14 +195,6 @@ function netctrl_render_public_session_card(array $session, $single = false)
                     <?php esc_html_e('Download PDF', 'netctrl'); ?>
                 </a>
             <?php endif; ?>
-            <button
-                type="button"
-                class="button button-secondary netctrl-public-session__toggle"
-                data-netctrl-session-toggle
-                aria-expanded="false"
-            >
-                <?php esc_html_e('Expand', 'netctrl'); ?>
-            </button>
         </div>
 
         <div class="netctrl-public-session__body" hidden>
