@@ -40,6 +40,9 @@ function netctrl_enqueue_public_assets()
             'commentsFallback' => __('No comments', 'netctrl'),
             'liveUpdates' => __('Live updates refresh automatically every few seconds.', 'netctrl'),
             'sessionUnavailable' => __('Session unavailable.', 'netctrl'),
+            'expand' => __('Expand', 'netctrl'),
+            'collapse' => __('Collapse', 'netctrl'),
+            'noEntries' => __('No entries recorded yet.', 'netctrl'),
         ),
     ));
 }
@@ -170,7 +173,23 @@ function netctrl_render_public_session_card(array $session, $single = false)
             </span>
         </div>
 
-        <div class="netctrl-public-session__body">
+        <div class="netctrl-public-session__actions">
+            <?php if (($session['status'] ?? '') === 'closed' && !empty($session['pdf_url'])) : ?>
+                <a class="button button-secondary netctrl-public-session__pdf" href="<?php echo esc_url($session['pdf_url']); ?>">
+                    <?php esc_html_e('Download PDF', 'netctrl'); ?>
+                </a>
+            <?php endif; ?>
+            <button
+                type="button"
+                class="button button-secondary netctrl-public-session__toggle"
+                data-netctrl-session-toggle
+                aria-expanded="false"
+            >
+                <?php esc_html_e('Expand', 'netctrl'); ?>
+            </button>
+        </div>
+
+        <div class="netctrl-public-session__body" hidden>
             <div class="netctrl-public-session__description"><?php echo esc_html($session['status_description']); ?></div>
             <ul class="netctrl-public-session__entries">
                 <?php if (!empty($session['entries'])) : ?>
@@ -187,11 +206,6 @@ function netctrl_render_public_session_card(array $session, $single = false)
                     <li class="netctrl-public-empty"><?php esc_html_e('No entries recorded yet.', 'netctrl'); ?></li>
                 <?php endif; ?>
             </ul>
-            <?php if (($session['status'] ?? '') === 'closed' && !empty($session['pdf_url'])) : ?>
-                <a class="button button-secondary netctrl-public-session__pdf" href="<?php echo esc_url($session['pdf_url']); ?>">
-                    <?php esc_html_e('Download PDF', 'netctrl'); ?>
-                </a>
-            <?php endif; ?>
         </div>
     </article>
     <?php
