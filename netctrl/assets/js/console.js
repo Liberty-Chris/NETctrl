@@ -595,10 +595,14 @@
       const selectedSession = activeSessionId ? sessions.find((session) => Number(session.id) === Number(activeSessionId)) : null;
       const openSession = sessions.find((session) => session.status === 'open') || null;
 
-      if (selectedSession) {
+      if (selectedSession && selectedSession.status === 'open') {
         const changedSelection = stableStringify(selectedSession) !== stableStringify(currentSession);
         await setActiveSession(selectedSession, { forceEntriesReload: force || changedSelection });
         return;
+      }
+
+      if (selectedSession && selectedSession.status !== 'open') {
+        resetActiveSession();
       }
 
       if (!userDismissedActiveSession && openSession) {

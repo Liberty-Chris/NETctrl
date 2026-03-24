@@ -38,9 +38,9 @@ function netctrl_format_display_timestamp($datetime)
         return '';
     }
 
-    $timestamp = strtotime($datetime);
+    $timestamp = mysql2date('U', $datetime, true);
 
-    if ($timestamp === false) {
+    if (!$timestamp) {
         return '';
     }
 
