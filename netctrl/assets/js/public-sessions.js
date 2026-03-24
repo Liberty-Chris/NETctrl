@@ -14,6 +14,12 @@
     expand: 'Expand',
     collapse: 'Collapse',
     noEntries: 'No entries recorded yet.',
+    checkinTypeShort: 'Short Time / No Traffic',
+    checkinTypeRegular: 'Regular',
+    typeLabel: 'Type',
+    announcementLabel: 'Announcement',
+    trafficLabel: 'Traffic',
+    legacyCommentsLabel: 'Legacy Comments',
     ...(config.strings || {}),
   };
 
@@ -42,13 +48,33 @@
       return `<li class="netctrl-public-empty">${escapeHtml(strings.noEntries)}</li>`;
     }
 
+    const renderCheckinDetails = (entry) => {
+      const lines = [
+        `<strong>${escapeHtml(strings.typeLabel)}:</strong> ${escapeHtml(entry.checkin_type === 'regular' ? strings.checkinTypeRegular : strings.checkinTypeShort)}`,
+      ];
+
+      if (entry.checkin_type === 'regular' && entry.has_announcement) {
+        lines.push(`<strong>${escapeHtml(strings.announcementLabel)}:</strong> ${escapeHtml(entry.announcement_details || 'Yes')}`);
+      }
+
+      if (entry.checkin_type === 'regular' && entry.has_traffic) {
+        lines.push(`<strong>${escapeHtml(strings.trafficLabel)}:</strong> ${escapeHtml(entry.traffic_details || 'Yes')}`);
+      }
+
+      if (entry.legacy_comments) {
+        lines.push(`<strong>${escapeHtml(strings.legacyCommentsLabel)}:</strong> ${escapeHtml(entry.legacy_comments)}`);
+      }
+
+      return lines.join('<br>');
+    };
+
     return entries
       .map((entry) => `
         <li>
           <strong>${escapeHtml(entry.callsign || '—')}</strong>
           <span>${escapeHtml(entry.name || '—')}</span>
           <span>${escapeHtml(entry.location || '—')}</span>
-          <span>${escapeHtml(entry.comments || '—')}</span>
+          <span>${renderCheckinDetails(entry)}</span>
           <span>${escapeHtml(entry.created_at || '—')}</span>
         </li>
       `)

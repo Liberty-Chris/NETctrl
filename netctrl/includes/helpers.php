@@ -114,6 +114,33 @@ function netctrl_get_status_description(array $session)
 
 function netctrl_prepare_entry_for_response(array $entry)
 {
+    $checkin_type = netctrl_normalize_checkin_type($entry['checkin_type'] ?? '');
+    $has_announcement = !empty($entry['has_announcement']);
+    $has_traffic = !empty($entry['has_traffic']);
+    $announcement_details = trim((string) ($entry['announcement_details'] ?? ''));
+    $traffic_details = trim((string) ($entry['traffic_details'] ?? ''));
+
+    if ($checkin_type !== 'regular') {
+        $has_announcement = false;
+        $has_traffic = false;
+        $announcement_details = '';
+        $traffic_details = '';
+    }
+
+    if (!$has_announcement) {
+        $announcement_details = '';
+    }
+
+    if (!$has_traffic) {
+        $traffic_details = '';
+    }
+
+    $entry['checkin_type'] = $checkin_type;
+    $entry['has_announcement'] = $has_announcement;
+    $entry['has_traffic'] = $has_traffic;
+    $entry['announcement_details'] = $announcement_details;
+    $entry['traffic_details'] = $traffic_details;
+    $entry['legacy_comments'] = trim((string) ($entry['comments'] ?? ''));
     $entry['created_at_raw'] = $entry['created_at'] ?? '';
     $entry['updated_at_raw'] = $entry['updated_at'] ?? '';
 
@@ -126,6 +153,17 @@ function netctrl_prepare_entry_for_response(array $entry)
     }
 
     return $entry;
+}
+
+function netctrl_normalize_checkin_type($value)
+{
+    $normalized = strtolower(trim((string) $value));
+
+    if (in_array($normalized, array('regular', 'full', 'standard'), true)) {
+        return 'regular';
+    }
+
+    return 'short_time_no_traffic';
 }
 
 function netctrl_prepare_session_for_response(array $session)

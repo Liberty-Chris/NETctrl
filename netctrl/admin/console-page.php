@@ -61,6 +61,13 @@ function netctrl_enqueue_console_assets()
             'monitoringLive' => __('Polling live updates every few seconds.', 'netctrl'),
             'statusLive' => __('Live', 'netctrl'),
             'statusClosed' => __('Closed', 'netctrl'),
+            'checkinTypeShort' => __('Short Time / No Traffic', 'netctrl'),
+            'checkinTypeRegular' => __('Regular', 'netctrl'),
+            'announcementLabel' => __('Announcement', 'netctrl'),
+            'trafficLabel' => __('Traffic', 'netctrl'),
+            'announcementDetailsLabel' => __('Announcement Details', 'netctrl'),
+            'trafficDetailsLabel' => __('Traffic Details', 'netctrl'),
+            'legacyCommentsLabel' => __('Legacy Comments', 'netctrl'),
         ),
     ));
 }
@@ -161,7 +168,22 @@ function netctrl_get_console_markup($is_frontend = false)
                     <input type="text" id="netctrl-first-name" placeholder="<?php echo esc_attr__('First Name', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-last-name" placeholder="<?php echo esc_attr__('Last Name', 'netctrl'); ?>" />
                     <input type="text" id="netctrl-location" placeholder="<?php echo esc_attr__('Location', 'netctrl'); ?>" />
-                    <input type="text" id="netctrl-comments" placeholder="<?php echo esc_attr__('Comments', 'netctrl'); ?>" />
+                    <select id="netctrl-checkin-type" aria-label="<?php echo esc_attr__('Check-in Type', 'netctrl'); ?>">
+                        <option value="short_time_no_traffic"><?php esc_html_e('Short Time / No Traffic', 'netctrl'); ?></option>
+                        <option value="regular"><?php esc_html_e('Regular', 'netctrl'); ?></option>
+                    </select>
+                    <div class="netctrl-entry-form__regular-fields" id="netctrl-regular-fields" hidden>
+                        <label class="netctrl-entry-form__checkbox">
+                            <input type="checkbox" id="netctrl-has-announcement" />
+                            <span><?php esc_html_e('Announcement', 'netctrl'); ?></span>
+                        </label>
+                        <label class="netctrl-entry-form__checkbox">
+                            <input type="checkbox" id="netctrl-has-traffic" />
+                            <span><?php esc_html_e('Traffic', 'netctrl'); ?></span>
+                        </label>
+                    </div>
+                    <input type="text" id="netctrl-announcement-details" placeholder="<?php echo esc_attr__('Announcement Details', 'netctrl'); ?>" hidden />
+                    <input type="text" id="netctrl-traffic-details" placeholder="<?php echo esc_attr__('Traffic Details', 'netctrl'); ?>" hidden />
                     <div class="netctrl-entry-form__lookup-note" id="netctrl-lookup-status" aria-live="polite"></div>
                     <div class="netctrl-entry-form__actions">
                         <button type="button" class="button button-primary" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
@@ -176,7 +198,7 @@ function netctrl_get_console_markup($is_frontend = false)
                                 <div role="columnheader"><?php esc_html_e('Callsign', 'netctrl'); ?></div>
                                 <div role="columnheader"><?php esc_html_e('Name', 'netctrl'); ?></div>
                                 <div role="columnheader"><?php esc_html_e('Location', 'netctrl'); ?></div>
-                                <div role="columnheader"><?php esc_html_e('Comments', 'netctrl'); ?></div>
+                                <div role="columnheader"><?php esc_html_e('Check-in', 'netctrl'); ?></div>
                                 <div role="columnheader"><?php esc_html_e('Actions', 'netctrl'); ?></div>
                             </div>
                         </div>

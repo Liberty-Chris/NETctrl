@@ -43,6 +43,12 @@ function netctrl_enqueue_public_assets()
             'expand' => __('Expand', 'netctrl'),
             'collapse' => __('Collapse', 'netctrl'),
             'noEntries' => __('No entries recorded yet.', 'netctrl'),
+            'checkinTypeShort' => __('Short Time / No Traffic', 'netctrl'),
+            'checkinTypeRegular' => __('Regular', 'netctrl'),
+            'typeLabel' => __('Type', 'netctrl'),
+            'announcementLabel' => __('Announcement', 'netctrl'),
+            'trafficLabel' => __('Traffic', 'netctrl'),
+            'legacyCommentsLabel' => __('Legacy Comments', 'netctrl'),
         ),
     ));
 }
@@ -198,7 +204,25 @@ function netctrl_render_public_session_card(array $session, $single = false)
                             <strong><?php echo esc_html($entry['callsign']); ?></strong>
                             <span><?php echo esc_html($entry['name'] ?: '—'); ?></span>
                             <span><?php echo esc_html($entry['location'] ?: '—'); ?></span>
-                            <span><?php echo esc_html($entry['comments'] ?: '—'); ?></span>
+                            <span>
+                                <strong><?php esc_html_e('Type', 'netctrl'); ?>:</strong>
+                                <?php echo esc_html(($entry['checkin_type'] ?? '') === 'regular' ? __('Regular', 'netctrl') : __('Short Time / No Traffic', 'netctrl')); ?>
+                                <?php if (!empty($entry['has_announcement'])) : ?>
+                                    <br />
+                                    <strong><?php esc_html_e('Announcement', 'netctrl'); ?>:</strong>
+                                    <?php echo esc_html(!empty($entry['announcement_details']) ? $entry['announcement_details'] : __('Yes', 'netctrl')); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($entry['has_traffic'])) : ?>
+                                    <br />
+                                    <strong><?php esc_html_e('Traffic', 'netctrl'); ?>:</strong>
+                                    <?php echo esc_html(!empty($entry['traffic_details']) ? $entry['traffic_details'] : __('Yes', 'netctrl')); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($entry['legacy_comments'])) : ?>
+                                    <br />
+                                    <strong><?php esc_html_e('Legacy Comments', 'netctrl'); ?>:</strong>
+                                    <?php echo esc_html($entry['legacy_comments']); ?>
+                                <?php endif; ?>
+                            </span>
                             <span><?php echo esc_html($entry['created_at'] ?: '—'); ?></span>
                         </li>
                     <?php endforeach; ?>

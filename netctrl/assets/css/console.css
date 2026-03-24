@@ -260,6 +260,50 @@
   width: 100%;
 }
 
+.netctrl-entry-form select {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+
+.netctrl-entry-form__regular-fields {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+
+.netctrl-entry-form__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.netctrl-entry-form__checkbox input {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+}
+
+.netctrl-inline-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.netctrl-inline-details {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.netctrl-checkin-summary {
+  display: grid;
+  gap: 0.2rem;
+}
+
 .netctrl-entry-form__actions {
   grid-column: 1 / -1;
   display: flex;
@@ -273,7 +317,9 @@
   box-sizing: border-box;
 }
 
-.netctrl-entry-form #netctrl-comments,
+.netctrl-entry-form #netctrl-checkin-type,
+.netctrl-entry-form #netctrl-announcement-details,
+.netctrl-entry-form #netctrl-traffic-details,
 .netctrl-entry-form #netctrl-location,
 .netctrl-entry-form #netctrl-first-name,
 .netctrl-entry-form #netctrl-last-name,
@@ -522,7 +568,7 @@
 
 .netctrl-public-session__entries li {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: minmax(90px, 0.8fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(240px, 2fr) minmax(90px, 0.8fr);
   gap: 0.75rem;
   padding: 0.7rem 0.8rem;
   border-radius: 8px;
@@ -538,7 +584,9 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__regular-fields,
+  .netctrl-entry-form #netctrl-announcement-details,
+  .netctrl-entry-form #netctrl-traffic-details,
   .netctrl-entry-form__lookup-note,
   .netctrl-entry-form__actions {
     grid-column: span 3;
@@ -550,7 +598,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__regular-fields,
+  .netctrl-entry-form #netctrl-announcement-details,
+  .netctrl-entry-form #netctrl-traffic-details,
   .netctrl-entry-form__lookup-note,
   .netctrl-entry-form__actions {
     grid-column: span 2;
@@ -596,7 +646,9 @@
     grid-template-columns: 1fr;
   }
 
-  .netctrl-entry-form #netctrl-comments,
+  .netctrl-entry-form__regular-fields,
+  .netctrl-entry-form #netctrl-announcement-details,
+  .netctrl-entry-form #netctrl-traffic-details,
   .netctrl-entry-form__lookup-note,
   .netctrl-entry-form__actions {
     grid-column: span 1;
@@ -645,7 +697,7 @@
   }
 
   .netctrl-entries-table__row > .netctrl-entries-table__cell:nth-child(4)::before {
-    content: 'Comments';
+    content: 'Check-in';
   }
 
   .netctrl-entries-table__row > .netctrl-entries-table__cell:nth-child(5)::before {
