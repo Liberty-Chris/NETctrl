@@ -11,6 +11,9 @@
     liveUpdates: 'Live updates refresh automatically every few seconds.',
     commentsFallback: 'No comments',
     sessionUnavailable: 'Session unavailable.',
+    expand: 'Expand',
+    collapse: 'Collapse',
+    noEntries: 'No entries recorded yet.',
     ...(config.strings || {}),
   };
 
@@ -36,7 +39,7 @@
 
   const renderEntries = (entries) => {
     if (!Array.isArray(entries) || !entries.length) {
-      return '<li class="netctrl-public-empty">No entries recorded yet.</li>';
+      return `<li class="netctrl-public-empty">${escapeHtml(strings.noEntries)}</li>`;
     }
 
     return entries
@@ -52,7 +55,7 @@
       .join('');
   };
 
-  const renderCard = (session) => {
+  const renderCard = (session, expanded = false) => {
     const statusClass = session.status === 'open' ? 'live' : 'closed';
     const closedMeta = session.closed_at ? `<span>Closed: ${escapeHtml(session.closed_at)}</span>` : '';
     const pdfLink = session.status === 'closed' && session.pdf_url
@@ -72,10 +75,15 @@
           </div>
           <span class="netctrl-status-badge netctrl-status-badge--${statusClass}">${escapeHtml(session.status_label || '')}</span>
         </div>
-        <div class="netctrl-public-session__body">
+        <div class="netctrl-public-session__actions">
+          ${pdfLink}
+          <button type="button" class="button button-secondary netctrl-public-session__toggle" data-netctrl-session-toggle aria-expanded="${expanded ? 'true' : 'false'}">
+            ${escapeHtml(expanded ? strings.collapse : strings.expand)}
+          </button>
+        </div>
+        <div class="netctrl-public-session__body" ${expanded ? '' : 'hidden'}>
           <div class="netctrl-public-session__description">${escapeHtml(session.status_description || strings.liveUpdates)}</div>
           <ul class="netctrl-public-session__entries">${renderEntries(session.entries || [])}</ul>
-          ${pdfLink}
         </div>
       </article>
     `;
@@ -90,6 +98,7 @@
   const initPublicSessions = (root) => {
     const openContainer = root.querySelector('[data-netctrl-open-sessions]');
     const closedContainer = root.querySelector('[data-netctrl-closed-sessions]');
+    const expandedIds = new Set();
     let lastSignature = '';
 
     const render = (payload) => {
@@ -100,11 +109,11 @@
       lastSignature = signature;
 
       openContainer.innerHTML = (payload.open_sessions || []).length
-        ? payload.open_sessions.map(renderCard).join('')
+        ? payload.open_sessions.map((session) => renderCard(session, expandedIds.has(String(session.id)))).join('')
         : `<p class="netctrl-public-empty">${escapeHtml(strings.noOpenSessions)}</p>`;
 
       closedContainer.innerHTML = (payload.closed_sessions || []).length
-        ? payload.closed_sessions.map(renderCard).join('')
+        ? payload.closed_sessions.map((session) => renderCard(session, expandedIds.has(String(session.id)))).join('')
         : `<p class="netctrl-public-empty">${escapeHtml(strings.noClosedSessions)}</p>`;
     };
 
@@ -117,12 +126,39 @@
       }
     };
 
+    root.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-netctrl-session-toggle]');
+      if (!toggle) {
+        return;
+      }
+
+      const card = toggle.closest('.netctrl-public-session');
+      const body = card?.querySelector('.netctrl-public-session__body');
+      const sessionId = card?.dataset.sessionId;
+
+      if (!card || !body || !sessionId) {
+        return;
+      }
+
+      const willExpand = body.hasAttribute('hidden');
+      body.toggleAttribute('hidden', !willExpand);
+      toggle.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
+      toggle.textContent = willExpand ? strings.collapse : strings.expand;
+
+      if (willExpand) {
+        expandedIds.add(String(sessionId));
+      } else {
+        expandedIds.delete(String(sessionId));
+      }
+    });
+
     window.setInterval(poll, pollInterval);
     poll();
   };
 
   const initPublicLog = (root) => {
     const sessionId = root.dataset.sessionId;
+    let isExpanded = false;
     let lastSignature = '';
 
     const render = (session) => {
@@ -131,7 +167,7 @@
         return;
       }
       lastSignature = signature;
-      root.innerHTML = renderCard(session);
+      root.innerHTML = renderCard(session, isExpanded);
     };
 
     const poll = async () => {
@@ -142,6 +178,24 @@
         root.innerHTML = `<p class="netctrl-public-empty">${escapeHtml(error.message || strings.sessionUnavailable)}</p>`;
       }
     };
+
+    root.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-netctrl-session-toggle]');
+      if (!toggle) {
+        return;
+      }
+
+      const card = toggle.closest('.netctrl-public-session');
+      const body = card?.querySelector('.netctrl-public-session__body');
+      if (!body) {
+        return;
+      }
+
+      isExpanded = body.hasAttribute('hidden');
+      body.toggleAttribute('hidden', !isExpanded);
+      toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      toggle.textContent = isExpanded ? strings.collapse : strings.expand;
+    });
 
     window.setInterval(poll, pollInterval);
     poll();
