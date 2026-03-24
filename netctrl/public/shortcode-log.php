@@ -38,7 +38,7 @@ function netctrl_render_log_shortcode($atts)
         <ul>
             <?php foreach ($entries as $entry) : ?>
                 <li>
-                    <?php echo esc_html($entry['created_at']); ?> -
+                    <?php echo esc_html(netctrl_format_display_timestamp($entry['created_at'])); ?> -
                     <?php echo esc_html($entry['callsign']); ?>
                     <?php echo esc_html($entry['name']); ?>
                     <?php echo esc_html($entry['location']); ?>

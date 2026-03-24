@@ -173,7 +173,7 @@ function netctrl_rest_list_entries(WP_REST_Request $request)
 {
     $session_id = (int) $request['id'];
 
-    return rest_ensure_response(netctrl_get_entries($session_id));
+    return rest_ensure_response(array_map('netctrl_prepare_entry_for_response', netctrl_get_entries($session_id)));
 }
 
 function netctrl_rest_create_entry(WP_REST_Request $request)
@@ -184,7 +184,7 @@ function netctrl_rest_create_entry(WP_REST_Request $request)
 
     return rest_ensure_response(array(
         'id' => $entry_id,
-        'entry' => netctrl_get_entry($entry_id),
+        'entry' => netctrl_prepare_entry_for_response(netctrl_get_entry($entry_id)),
     ));
 }
 
@@ -202,7 +202,7 @@ function netctrl_rest_update_entry(WP_REST_Request $request)
 
     return rest_ensure_response(array(
         'id' => $entry_id,
-        'entry' => netctrl_get_entry($entry_id),
+        'entry' => netctrl_prepare_entry_for_response(netctrl_get_entry($entry_id)),
     ));
 }
 
@@ -265,7 +265,7 @@ function netctrl_rest_download_pdf(WP_REST_Request $request)
     foreach ($entries as $entry) {
         $content .= sprintf(
             "%s - %s %s (%s)\n",
-            $entry['created_at'],
+            netctrl_format_display_timestamp($entry['created_at']),
             $entry['callsign'],
             $entry['name'],
             $entry['location']
