@@ -37,6 +37,7 @@ function netctrl_enqueue_console_assets()
     wp_localize_script('netctrl-console', 'netctrlConsole', array(
         'restUrl' => esc_url_raw(rest_url('netctrl/v1')),
         'nonce' => wp_create_nonce('wp_rest'),
+        'pollInterval' => 4000,
         'strings' => array(
             'unableToLoadSessions' => __('Unable to load sessions.', 'netctrl'),
             'unableToLoadEntries' => __('Unable to load entries.', 'netctrl'),
@@ -45,9 +46,7 @@ function netctrl_enqueue_console_assets()
             'activeSessionLabel' => __('Current session:', 'netctrl'),
             'noRecentSessions' => __('No recent sessions found.', 'netctrl'),
             'noEntries' => __('No entries recorded yet.', 'netctrl'),
-            'sessionPreviewLabel' => __('Session name preview:', 'netctrl'),
             'sessionPreviewFallback' => __('Choose a session type to generate the session name.', 'netctrl'),
-            'specialEventLabel' => __('Event Description (optional)', 'netctrl'),
             'editEntry' => __('Edit entry', 'netctrl'),
             'deleteEntry' => __('Delete entry', 'netctrl'),
             'deleteEntryConfirm' => __('Delete this entry?', 'netctrl'),
@@ -55,6 +54,13 @@ function netctrl_enqueue_console_assets()
             'cancelEdit' => __('Cancel', 'netctrl'),
             'lookupRoster' => __('Populated from roster', 'netctrl'),
             'lookupQrz' => __('Populated from QRZ', 'netctrl'),
+            'sessionActive' => __('Session active', 'netctrl'),
+            'liveSessionInProgress' => __('Live session in progress', 'netctrl'),
+            'startDisabled' => __('Start Session is unavailable while another live session is open.', 'netctrl'),
+            'sessionClosed' => __('Session closed.', 'netctrl'),
+            'monitoringLive' => __('Polling live updates every few seconds.', 'netctrl'),
+            'statusLive' => __('Live', 'netctrl'),
+            'statusClosed' => __('Closed', 'netctrl'),
         ),
     ));
 }
@@ -75,9 +81,17 @@ function netctrl_get_console_markup($is_frontend = false)
     <div class="netctrl-console<?php echo $is_frontend ? ' netctrl-console--frontend' : ''; ?>" data-netctrl-console-root>
         <div class="netctrl-console__messages" aria-live="polite"></div>
 
-        <section class="netctrl-panel netctrl-panel--session-start">
-            <h2><?php esc_html_e('New Session', 'netctrl'); ?></h2>
+        <section class="netctrl-panel netctrl-panel--session-start" data-netctrl-start-panel>
+            <div class="netctrl-panel__heading">
+                <h2><?php esc_html_e('New Session', 'netctrl'); ?></h2>
+                <span class="netctrl-status-badge netctrl-status-badge--idle" data-netctrl-start-status>
+                    <?php esc_html_e('Idle', 'netctrl'); ?>
+                </span>
+            </div>
             <div class="netctrl-panel__body netctrl-panel__body--stacked">
+                <div class="netctrl-start-session-note" data-netctrl-start-note>
+                    <?php esc_html_e('Start a session to begin live logging.', 'netctrl'); ?>
+                </div>
                 <div class="netctrl-session-builder">
                     <div class="netctrl-session-builder__group">
                         <label for="netctrl-session-date"><?php esc_html_e('Date', 'netctrl'); ?></label>
@@ -128,11 +142,19 @@ function netctrl_get_console_markup($is_frontend = false)
             </div>
         </section>
 
-        <section class="netctrl-panel netctrl-panel--active-session">
-            <h2><?php esc_html_e('Active Session', 'netctrl'); ?></h2>
+        <section class="netctrl-panel netctrl-panel--active-session" data-netctrl-active-panel>
+            <div class="netctrl-panel__heading">
+                <h2><?php esc_html_e('Active Session', 'netctrl'); ?></h2>
+                <span class="netctrl-status-badge netctrl-status-badge--idle" id="netctrl-active-status-badge">
+                    <?php esc_html_e('Idle', 'netctrl'); ?>
+                </span>
+            </div>
             <div class="netctrl-panel__body">
                 <div id="netctrl-active-session" class="netctrl-active-session">
                     <?php esc_html_e('Select or start a session to begin logging.', 'netctrl'); ?>
+                </div>
+                <div class="netctrl-active-session__meta" id="netctrl-active-session-meta">
+                    <?php esc_html_e('Polling live updates every few seconds.', 'netctrl'); ?>
                 </div>
                 <div class="netctrl-entry-form" role="group" aria-label="<?php echo esc_attr__('Entry form', 'netctrl'); ?>">
                     <input type="text" id="netctrl-callsign" placeholder="<?php echo esc_attr__('Callsign', 'netctrl'); ?>" />

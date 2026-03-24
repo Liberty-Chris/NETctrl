@@ -51,6 +51,10 @@
   color: #b32d2e;
 }
 
+.netctrl-console__messages--success {
+  color: #0a7a35;
+}
+
 .netctrl-console .button {
   display: inline-flex;
   align-items: center;
@@ -71,6 +75,18 @@
   box-shadow: 0 4px 14px rgba(29, 35, 39, 0.05);
   box-sizing: border-box;
   overflow: visible;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.netctrl-panel.is-live {
+  border-color: #0a7a35;
+  box-shadow: 0 8px 24px rgba(10, 122, 53, 0.12);
+  background: linear-gradient(180deg, #f6fff8 0%, #ffffff 100%);
+}
+
+.netctrl-panel.is-closed {
+  border-color: #8c8f94;
+  background: linear-gradient(180deg, #f9f9f9 0%, #ffffff 100%);
 }
 
 .netctrl-panel *,
@@ -92,6 +108,14 @@
 
 .netctrl-panel h3 {
   font-size: 1rem;
+}
+
+.netctrl-panel__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .netctrl-panel__body {
@@ -126,10 +150,54 @@
   box-sizing: border-box;
 }
 
+.netctrl-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.netctrl-status-badge--idle {
+  background: #f1f1f1;
+  color: #50575e;
+}
+
+.netctrl-status-badge--live {
+  background: #d7f5df;
+  color: #0a7a35;
+}
+
+.netctrl-status-badge--closed {
+  background: #eceff1;
+  color: #3c434a;
+}
+
+.netctrl-start-session-note,
+.netctrl-active-session__meta {
+  padding: 0.8rem 0.95rem;
+  border-radius: 8px;
+  background: #f6f7f7;
+  color: #1d2327;
+  font-weight: 600;
+}
+
+.netctrl-panel.is-live .netctrl-start-session-note,
+.netctrl-panel.is-live .netctrl-active-session__meta {
+  background: #e8f7ec;
+  color: #0a7a35;
+}
+
 .netctrl-active-session {
   margin-bottom: 0;
-  font-weight: 600;
+  font-weight: 700;
   min-width: 0;
+  font-size: 1.05rem;
 }
 
 .netctrl-session-builder {
@@ -236,7 +304,15 @@
   white-space: nowrap;
 }
 
-#netctrl-add-entry {
+#netctrl-start-session[disabled] {
+  background: #dcdcde;
+  border-color: #dcdcde;
+  color: #50575e;
+  cursor: not-allowed;
+}
+
+#netctrl-add-entry,
+#netctrl-close-session {
   min-height: 40px;
 }
 
@@ -269,10 +345,16 @@
   gap: 0.35rem;
 }
 
-.netctrl-session-list__title {
-  font-weight: 600;
+.netctrl-session-list__item.is-selected {
+  border-left: 4px solid #0a7a35;
+  padding-left: 0.75rem;
 }
 
+.netctrl-session-list__title {
+  font-weight: 700;
+}
+
+.netctrl-session-list__meta,
 .netctrl-session-list__audit {
   display: flex;
   flex-direction: column;
@@ -281,7 +363,8 @@
   font-size: 0.9rem;
 }
 
-.netctrl-list__empty {
+.netctrl-list__empty,
+.netctrl-public-empty {
   padding: 1rem;
   color: #50575e;
 }
@@ -381,6 +464,75 @@
   min-width: 0;
 }
 
+.netctrl-public-sessions__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.netctrl-public-section__note {
+  margin: 0 0 1rem;
+  color: #50575e;
+}
+
+.netctrl-public-session {
+  border: 1px solid #dcdcde;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fff;
+  margin-top: 1rem;
+}
+
+.netctrl-public-session--live {
+  border-color: #0a7a35;
+  background: linear-gradient(180deg, #f7fff9 0%, #fff 100%);
+}
+
+.netctrl-public-session__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.netctrl-public-session__header h3 {
+  margin-bottom: 0.35rem;
+}
+
+.netctrl-public-session__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  color: #50575e;
+  font-size: 0.92rem;
+}
+
+.netctrl-public-session__description {
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.netctrl-public-session__entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.netctrl-public-session__entries li {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  background: #f6f7f7;
+}
+
+.netctrl-public-session__pdf {
+  margin-top: 1rem;
+}
+
 @media (max-width: 1180px) {
   .netctrl-entry-form {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -418,6 +570,10 @@
   .netctrl-entry-form__actions .button {
     flex: 1 1 180px;
   }
+
+  .netctrl-public-session__entries li {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 782px) {
@@ -425,11 +581,18 @@
     padding: 0 0.5rem;
   }
 
+  .netctrl-panel__heading,
+  .netctrl-public-session__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .netctrl-session-types {
     grid-template-columns: 1fr;
   }
 
-  .netctrl-entry-form {
+  .netctrl-entry-form,
+  .netctrl-public-session__entries li {
     grid-template-columns: 1fr;
   }
 

@@ -155,6 +155,10 @@ function netctrl_rest_create_session(WP_REST_Request $request)
     $net_name = $request->get_param('net_name');
     $session_id = netctrl_create_session($net_name);
 
+    if (is_wp_error($session_id)) {
+        return $session_id;
+    }
+
     return rest_ensure_response(array(
         'id' => $session_id,
         'session' => netctrl_prepare_session_for_response(netctrl_get_session($session_id)),
@@ -258,22 +262,18 @@ function netctrl_rest_prepare_entry_payload(WP_REST_Request $request)
 
 function netctrl_rest_download_pdf(WP_REST_Request $request)
 {
-    $session_id = (int) $request['id'];
-    $entries = netctrl_get_entries($session_id);
+    $session = netctrl_get_session((int) $request['id']);
 
-    $content = "NETctrl Session {$session_id}\n";
-    foreach ($entries as $entry) {
-        $content .= sprintf(
-            "%s - %s %s (%s)\n",
-            netctrl_format_display_timestamp($entry['created_at']),
-            $entry['callsign'],
-            $entry['name'],
-            $entry['location']
-        );
+    if (!$session) {
+        return new WP_Error('netctrl_not_found', __('Session not found.', 'netctrl'), array('status' => 404));
     }
 
-    return new WP_REST_Response($content, 200, array(
-        'Content-Type' => 'application/octet-stream',
-        'Content-Disposition' => 'attachment; filename=\"netctrl-session-' . $session_id . '.txt\"',
+    if (($session['status'] ?? '') !== 'closed') {
+        return new WP_Error('netctrl_session_open', __('PDF downloads are only available for closed sessions.', 'netctrl'), array('status' => 400));
+    }
+
+    return new WP_REST_Response(netctrl_generate_session_pdf((int) $session['id']), 200, array(
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'attachment; filename="netctrl-session-' . (int) $session['id'] . '.pdf"',
     ));
 }

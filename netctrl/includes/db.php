@@ -416,17 +416,29 @@ function netctrl_delete_roster_entry($roster_id)
     );
 }
 
+function netctrl_get_current_open_session()
+{
+    $sessions = netctrl_get_sessions('open');
+
+    return $sessions ? $sessions[0] : null;
+}
+
 function netctrl_create_session($net_name)
 {
     global $wpdb;
     $table = netctrl_get_table('sessions');
     $timestamp = current_time('mysql');
     $user_id = get_current_user_id();
+    $existing_open_session = netctrl_get_current_open_session();
 
-    $wpdb->insert(
+    if ($existing_open_session) {
+        return new WP_Error('netctrl_session_already_open', __('A live session is already in progress.', 'netctrl'), array('status' => 409));
+    }
+
+    $inserted = $wpdb->insert(
         $table,
         array(
-            'net_name' => $net_name,
+            'net_name' => sanitize_text_field($net_name),
             'started_at' => $timestamp,
             'created_at' => $timestamp,
             'created_by' => $user_id ?: null,
@@ -435,7 +447,11 @@ function netctrl_create_session($net_name)
         array('%s', '%s', '%s', '%d', '%s')
     );
 
-    return $wpdb->insert_id;
+    if (!$inserted) {
+        return new WP_Error('netctrl_session_create_failed', __('Unable to start the session.', 'netctrl'));
+    }
+
+    return (int) $wpdb->insert_id;
 }
 
 function netctrl_close_session($session_id)
@@ -451,9 +467,11 @@ function netctrl_close_session($session_id)
             'status' => 'closed',
             'closed_at' => $timestamp,
             'closed_by' => $user_id ?: null,
+            'updated_at' => $timestamp,
+            'updated_by' => $user_id ?: null,
         ),
         array('id' => $session_id),
-        array('%s', '%s', '%d'),
+        array('%s', '%s', '%d', '%s', '%d'),
         array('%d')
     );
 }
@@ -493,6 +511,18 @@ function netctrl_get_sessions($status = null)
     return $wpdb->get_results("SELECT * FROM {$table} ORDER BY started_at DESC", ARRAY_A);
 }
 
+function netctrl_get_recent_closed_sessions($limit = 5)
+{
+    global $wpdb;
+    $table = netctrl_get_table('sessions');
+    $limit = max(1, (int) $limit);
+
+    return $wpdb->get_results(
+        $wpdb->prepare("SELECT * FROM {$table} WHERE status = %s ORDER BY closed_at DESC, started_at DESC LIMIT %d", 'closed', $limit),
+        ARRAY_A
+    );
+}
+
 function netctrl_get_session($session_id)
 {
     global $wpdb;
@@ -526,7 +556,7 @@ function netctrl_add_entry($session_id, array $entry)
         netctrl_touch_session($session_id);
     }
 
-    return $wpdb->insert_id;
+    return (int) $wpdb->insert_id;
 }
 
 function netctrl_update_entry($entry_id, array $entry)
