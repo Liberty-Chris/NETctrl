@@ -187,6 +187,38 @@ Displays a public view of current live sessions and recent closed sessions.
 - Live sessions are visible in the live section and refresh automatically.
 - Closed sessions include a **Download PDF** button when available.
 
+### `[netctrl_stats]`
+
+Displays a public-facing participation leaderboard built from existing NETctrl session entries.
+
+- Uses weighted participation scoring (v1):
+  - **Short Time / No Traffic** = 1 point
+  - **Regular** = 2 points
+  - **Announcement** = +2 points
+  - **Traffic** = +3 points
+- Leaderboard columns include rank, callsign, name, score, participation breakdown, and last heard timestamp.
+- Callsign is treated as the primary identity key, with name shown when available.
+- Includes lightweight recognition labels for the selected range:
+  - **Top Net Contributor**
+  - **Traffic Lead**
+  - **Announcement Lead**
+  - **Most Active**
+- Time filters:
+  - **All Time**
+  - **This Month**
+  - **Last 30 Days**
+- Defaults to sorting by score (desc), then total sessions (desc), then latest heard activity.
+- Data is generated dynamically from existing entries with graceful handling for legacy records when possible.
+
+## Participation stats page behavior
+
+The participation stats page is designed to be publicly publishable without exposing operator controls.
+
+- Separate shortcode-driven view independent from the operator console and public sessions cards.
+- Clean, responsive layout intended for desktop and tablet readability.
+- Leaderboard and summary labels update based on selected time filter.
+- No manual score entry required; scores are derived from existing stored check-in data.
+
 ## Public sessions page behavior
 
 The public sessions page is designed for clarity and safe read-only visibility.

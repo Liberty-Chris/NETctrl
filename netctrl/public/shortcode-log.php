@@ -11,6 +11,7 @@ add_action('wp_ajax_netctrl_public_session', 'netctrl_ajax_public_session');
 add_action('wp_ajax_nopriv_netctrl_public_session', 'netctrl_ajax_public_session');
 add_shortcode('netctrl_log', 'netctrl_render_log_shortcode');
 add_shortcode('netctrl_public_sessions', 'netctrl_render_public_sessions_shortcode');
+add_shortcode('netctrl_stats', 'netctrl_render_stats_shortcode');
 
 function netctrl_register_public_assets()
 {
@@ -154,6 +155,319 @@ function netctrl_render_public_sessions_shortcode()
     <?php
 
     return ob_get_clean();
+}
+
+function netctrl_render_stats_shortcode()
+{
+    netctrl_register_public_assets();
+    wp_enqueue_style('netctrl-console');
+
+    $scope = netctrl_get_stats_scope();
+    $stats = netctrl_get_stats_data($scope);
+    $labels = netctrl_get_stats_labels($stats['rows']);
+
+    ob_start();
+    ?>
+    <div class="netctrl-stats">
+        <section class="netctrl-panel netctrl-public-section">
+            <div class="netctrl-panel__heading">
+                <h2><?php esc_html_e('NETctrl Participation Stats', 'netctrl'); ?></h2>
+            </div>
+            <p class="netctrl-public-section__note">
+                <?php esc_html_e('Weighted participation leaderboard for net check-ins, announcements, and traffic handling.', 'netctrl'); ?>
+            </p>
+
+            <form class="netctrl-stats__filters" method="get">
+                <label for="netctrl-stats-scope"><?php esc_html_e('Time Range', 'netctrl'); ?></label>
+                <select id="netctrl-stats-scope" name="netctrl_scope" onchange="this.form.submit()">
+                    <?php foreach (netctrl_get_stats_scopes() as $key => $label) : ?>
+                        <option value="<?php echo esc_attr($key); ?>" <?php selected($scope, $key); ?>><?php echo esc_html($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <noscript>
+                    <button type="submit" class="button button-secondary"><?php esc_html_e('Apply', 'netctrl'); ?></button>
+                </noscript>
+            </form>
+
+            <div class="netctrl-stats__labels">
+                <?php foreach ($labels as $label) : ?>
+                    <article class="netctrl-stats__label-card">
+                        <h3><?php echo esc_html($label['title']); ?></h3>
+                        <p>
+                            <strong><?php echo esc_html($label['callsign']); ?></strong>
+                            <?php if (!empty($label['name'])) : ?>
+                                <span>— <?php echo esc_html($label['name']); ?></span>
+                            <?php endif; ?>
+                        </p>
+                        <p class="netctrl-stats__label-meta"><?php echo esc_html($label['meta']); ?></p>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="netctrl-stats__table-wrap">
+                <table class="netctrl-stats__table">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e('Rank', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Callsign', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Name', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Score', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Total Sessions', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Regular Check-ins', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Short Time Check-ins', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Announcements', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Traffic', 'netctrl'); ?></th>
+                            <th><?php esc_html_e('Last Heard', 'netctrl'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($stats['rows']) : ?>
+                            <?php foreach ($stats['rows'] as $index => $row) : ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) ($index + 1)); ?></td>
+                                    <td><?php echo esc_html($row['callsign']); ?></td>
+                                    <td><?php echo esc_html($row['name'] !== '' ? $row['name'] : '—'); ?></td>
+                                    <td><?php echo esc_html((string) $row['score']); ?></td>
+                                    <td><?php echo esc_html((string) $row['total_sessions']); ?></td>
+                                    <td><?php echo esc_html((string) $row['regular_checkins']); ?></td>
+                                    <td><?php echo esc_html((string) $row['short_time_checkins']); ?></td>
+                                    <td><?php echo esc_html((string) $row['announcements']); ?></td>
+                                    <td><?php echo esc_html((string) $row['traffic']); ?></td>
+                                    <td><?php echo esc_html($row['last_heard']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <tr>
+                                <td colspan="10" class="netctrl-public-empty"><?php esc_html_e('No participation data found for this time range.', 'netctrl'); ?></td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <?php
+
+    return ob_get_clean();
+}
+
+function netctrl_get_stats_scope()
+{
+    $scope = isset($_GET['netctrl_scope']) ? sanitize_key(wp_unslash($_GET['netctrl_scope'])) : 'all_time';
+    $scopes = netctrl_get_stats_scopes();
+
+    return isset($scopes[$scope]) ? $scope : 'all_time';
+}
+
+function netctrl_get_stats_scopes()
+{
+    return array(
+        'all_time' => __('All Time', 'netctrl'),
+        'this_month' => __('This Month', 'netctrl'),
+        'last_30_days' => __('Last 30 Days', 'netctrl'),
+    );
+}
+
+function netctrl_get_stats_data($scope)
+{
+    $cache_key = 'netctrl_stats_' . $scope;
+    $cached = get_transient($cache_key);
+
+    if (is_array($cached)) {
+        return $cached;
+    }
+
+    global $wpdb;
+    $entries_table = netctrl_get_table('entries');
+    $sessions_table = netctrl_get_table('sessions');
+
+    $where = '';
+    $query_args = array();
+
+    if ($scope === 'this_month') {
+        $start_date = gmdate('Y-m-01 00:00:00');
+        $where = "WHERE COALESCE(NULLIF(e.created_at, '0000-00-00 00:00:00'), s.created_at, s.started_at) >= %s";
+        $query_args[] = $start_date;
+    } elseif ($scope === 'last_30_days') {
+        $start_date = gmdate('Y-m-d H:i:s', time() - (30 * DAY_IN_SECONDS));
+        $where = "WHERE COALESCE(NULLIF(e.created_at, '0000-00-00 00:00:00'), s.created_at, s.started_at) >= %s";
+        $query_args[] = $start_date;
+    }
+
+    $sql = "SELECT
+            e.callsign,
+            e.name,
+            e.checkin_type,
+            e.has_announcement,
+            e.has_traffic,
+            e.comments,
+            COALESCE(NULLIF(e.created_at, '0000-00-00 00:00:00'), s.created_at, s.started_at) AS heard_at
+        FROM {$entries_table} e
+        LEFT JOIN {$sessions_table} s ON s.id = e.session_id
+        {$where}
+        ORDER BY heard_at DESC, e.id DESC";
+
+    if ($query_args) {
+        $rows = $wpdb->get_results($wpdb->prepare($sql, $query_args), ARRAY_A);
+    } else {
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+    }
+
+    $grouped = array();
+
+    foreach ($rows as $entry) {
+        $callsign = netctrl_normalize_callsign($entry['callsign'] ?? '');
+
+        if ($callsign === '') {
+            continue;
+        }
+
+        if (!isset($grouped[$callsign])) {
+            $grouped[$callsign] = array(
+                'callsign' => $callsign,
+                'name' => trim((string) ($entry['name'] ?? '')),
+                'score' => 0,
+                'total_sessions' => 0,
+                'regular_checkins' => 0,
+                'short_time_checkins' => 0,
+                'announcements' => 0,
+                'traffic' => 0,
+                'last_heard_raw' => '',
+                'last_heard' => '',
+            );
+        }
+
+        if ($grouped[$callsign]['name'] === '' && !empty($entry['name'])) {
+            $grouped[$callsign]['name'] = trim((string) $entry['name']);
+        }
+
+        $grouped[$callsign]['total_sessions']++;
+
+        $checkin_type = netctrl_normalize_checkin_type($entry['checkin_type'] ?? '');
+        $is_regular = $checkin_type === 'regular';
+
+        if ($is_regular) {
+            $grouped[$callsign]['regular_checkins']++;
+            $grouped[$callsign]['score'] += 2;
+        } else {
+            $grouped[$callsign]['short_time_checkins']++;
+            $grouped[$callsign]['score'] += 1;
+        }
+
+        $has_announcement = !empty($entry['has_announcement']);
+        $has_traffic = !empty($entry['has_traffic']);
+
+        // Best effort for legacy records: include common text-only signals from comments.
+        if (!$has_announcement || !$has_traffic) {
+            $legacy_comments = strtolower(trim((string) ($entry['comments'] ?? '')));
+            if ($legacy_comments !== '') {
+                if (!$has_announcement && strpos($legacy_comments, 'announcement') !== false) {
+                    $has_announcement = true;
+                }
+                if (!$has_traffic && strpos($legacy_comments, 'traffic') !== false) {
+                    $has_traffic = true;
+                }
+            }
+        }
+
+        if ($has_announcement) {
+            $grouped[$callsign]['announcements']++;
+            $grouped[$callsign]['score'] += 2;
+        }
+
+        if ($has_traffic) {
+            $grouped[$callsign]['traffic']++;
+            $grouped[$callsign]['score'] += 3;
+        }
+
+        $heard_at = trim((string) ($entry['heard_at'] ?? ''));
+        if ($heard_at !== '' && ($grouped[$callsign]['last_heard_raw'] === '' || $heard_at > $grouped[$callsign]['last_heard_raw'])) {
+            $grouped[$callsign]['last_heard_raw'] = $heard_at;
+            $grouped[$callsign]['last_heard'] = netctrl_format_display_timestamp($heard_at);
+        }
+    }
+
+    $leaderboard = array_values($grouped);
+    usort($leaderboard, 'netctrl_sort_stats_rows');
+
+    $result = array('rows' => $leaderboard);
+    set_transient($cache_key, $result, 5 * MINUTE_IN_SECONDS);
+
+    return $result;
+}
+
+function netctrl_sort_stats_rows(array $a, array $b)
+{
+    if ($a['score'] !== $b['score']) {
+        return $b['score'] <=> $a['score'];
+    }
+
+    if ($a['total_sessions'] !== $b['total_sessions']) {
+        return $b['total_sessions'] <=> $a['total_sessions'];
+    }
+
+    return strcmp($b['last_heard_raw'], $a['last_heard_raw']);
+}
+
+function netctrl_get_stats_labels(array $rows)
+{
+    $categories = array(
+        'top_score' => array(
+            'title' => __('Top Net Contributor', 'netctrl'),
+            'field' => 'score',
+            'meta_label' => __('Score', 'netctrl'),
+        ),
+        'top_traffic' => array(
+            'title' => __('Traffic Lead', 'netctrl'),
+            'field' => 'traffic',
+            'meta_label' => __('Traffic', 'netctrl'),
+        ),
+        'top_announcement' => array(
+            'title' => __('Announcement Lead', 'netctrl'),
+            'field' => 'announcements',
+            'meta_label' => __('Announcements', 'netctrl'),
+        ),
+        'most_active' => array(
+            'title' => __('Most Active', 'netctrl'),
+            'field' => 'total_sessions',
+            'meta_label' => __('Sessions', 'netctrl'),
+        ),
+    );
+
+    $labels = array();
+    foreach ($categories as $category) {
+        $winner = netctrl_get_stats_label_winner($rows, $category['field']);
+        $labels[] = array(
+            'title' => $category['title'],
+            'callsign' => $winner['callsign'],
+            'name' => $winner['name'],
+            'meta' => sprintf('%s: %d', $category['meta_label'], (int) $winner[$category['field']]),
+        );
+    }
+
+    return $labels;
+}
+
+function netctrl_get_stats_label_winner(array $rows, $field)
+{
+    if (!$rows) {
+        return array(
+            'callsign' => __('N/A', 'netctrl'),
+            'name' => '',
+            $field => 0,
+        );
+    }
+
+    $winner = $rows[0];
+    foreach ($rows as $row) {
+        if ((int) $row[$field] > (int) $winner[$field]) {
+            $winner = $row;
+        } elseif ((int) $row[$field] === (int) $winner[$field] && netctrl_sort_stats_rows($row, $winner) < 0) {
+            $winner = $row;
+        }
+    }
+
+    return $winner;
 }
 
 function netctrl_render_public_session_card(array $session, $single = false)
