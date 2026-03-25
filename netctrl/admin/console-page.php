@@ -73,6 +73,7 @@ function netctrl_enqueue_console_assets()
             'announcementDetailsLabel' => __('Announcement Details', 'netctrl'),
             'trafficDetailsLabel' => __('Traffic Details', 'netctrl'),
             'legacyCommentsLabel' => __('Legacy Comments', 'netctrl'),
+            'commentsLabel' => __('Comments', 'netctrl'),
         ),
     ));
 }
@@ -189,6 +190,7 @@ function netctrl_get_console_markup($is_frontend = false)
                     </div>
                     <input type="text" id="netctrl-announcement-details" placeholder="<?php echo esc_attr__('Announcement Details', 'netctrl'); ?>" hidden />
                     <input type="text" id="netctrl-traffic-details" placeholder="<?php echo esc_attr__('Traffic Details', 'netctrl'); ?>" hidden />
+                    <input type="text" id="netctrl-comments" placeholder="<?php echo esc_attr__('Comments', 'netctrl'); ?>" />
                     <div class="netctrl-entry-form__lookup-note" id="netctrl-lookup-status" aria-live="polite"></div>
                     <div class="netctrl-entry-form__actions">
                         <button type="button" class="button button-primary" id="netctrl-add-entry"><?php esc_html_e('Add Entry', 'netctrl'); ?></button>
