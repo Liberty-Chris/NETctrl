@@ -38,6 +38,7 @@
     announcementDetailsLabel: 'Announcement Details',
     trafficDetailsLabel: 'Traffic Details',
     legacyCommentsLabel: 'Legacy Comments',
+    commentsLabel: 'Comments',
     ...(config.strings || {}),
   };
 
@@ -106,6 +107,7 @@
     const hasTrafficInput = root.querySelector('#netctrl-has-traffic');
     const announcementDetailsInput = root.querySelector('#netctrl-announcement-details');
     const trafficDetailsInput = root.querySelector('#netctrl-traffic-details');
+    const commentsInput = root.querySelector('#netctrl-comments');
     const lookupStatusEl = root.querySelector('#netctrl-lookup-status');
     const startButton = root.querySelector('#netctrl-start-session');
     const addEntryButton = root.querySelector('#netctrl-add-entry');
@@ -137,6 +139,7 @@
       !hasTrafficInput ||
       !announcementDetailsInput ||
       !trafficDetailsInput ||
+      !commentsInput ||
       !startPanel ||
       !startStatusEl ||
       !startNoteEl ||
@@ -236,6 +239,7 @@
       hasTrafficInput.checked = false;
       announcementDetailsInput.value = '';
       trafficDetailsInput.value = '';
+      commentsInput.value = '';
       refreshCheckinForm();
       resetFieldState('firstName');
       resetFieldState('lastName');
@@ -280,7 +284,7 @@
       closeSessionButton.disabled = !isOpen;
       reopenSessionButton.disabled = !isClosed || hasLiveSession;
       reopenSessionButton.hidden = !isClosed;
-      [callsignInput, firstNameInput, lastNameInput, locationInput, checkinTypeInput, hasAnnouncementInput, hasTrafficInput, announcementDetailsInput, trafficDetailsInput].forEach((input) => {
+      [callsignInput, firstNameInput, lastNameInput, locationInput, checkinTypeInput, hasAnnouncementInput, hasTrafficInput, announcementDetailsInput, trafficDetailsInput, commentsInput].forEach((input) => {
         input.disabled = !isOpen;
       });
 
@@ -623,11 +627,17 @@
       trafficDetailsEditor.placeholder = strings.trafficDetailsLabel;
       trafficDetailsEditor.value = entry.traffic_details || '';
 
+      const commentsEditor = document.createElement('input');
+      commentsEditor.type = 'text';
+      commentsEditor.placeholder = strings.commentsLabel;
+      commentsEditor.value = entry.comments || '';
+
       const detailsEditorWrap = document.createElement('div');
       detailsEditorWrap.className = 'netctrl-inline-details';
       detailsEditorWrap.appendChild(regularToggles);
       detailsEditorWrap.appendChild(announcementDetailsEditor);
       detailsEditorWrap.appendChild(trafficDetailsEditor);
+      detailsEditorWrap.appendChild(commentsEditor);
 
       const refreshInlineFields = () => {
         const isRegular = checkinTypeEditor.value === 'regular';
@@ -664,7 +674,7 @@
           has_traffic: checkinTypeEditor.value === 'regular' ? trafficCheckbox.checked : false,
           announcement_details: checkinTypeEditor.value === 'regular' && announcementCheckbox.checked ? announcementDetailsEditor.value.trim() : '',
           traffic_details: checkinTypeEditor.value === 'regular' && trafficCheckbox.checked ? trafficDetailsEditor.value.trim() : '',
-          comments: entry.comments || '',
+          comments: commentsEditor.value.trim(),
         };
 
         if (!payload.callsign) {
@@ -694,7 +704,7 @@
         renderEntries(currentEntries);
       });
 
-      [callsignEditor, nameEditor, locationEditor, checkinTypeEditor, announcementDetailsEditor, trafficDetailsEditor].forEach((input) => {
+      [callsignEditor, nameEditor, locationEditor, checkinTypeEditor, announcementDetailsEditor, trafficDetailsEditor, commentsEditor].forEach((input) => {
         input.addEventListener('keydown', (event) => {
           if (event.key === 'Enter') {
             event.preventDefault();
@@ -919,7 +929,7 @@
         has_traffic: checkinTypeInput.value === 'regular' ? hasTrafficInput.checked : false,
         announcement_details: checkinTypeInput.value === 'regular' && hasAnnouncementInput.checked ? announcementDetailsInput.value.trim() : '',
         traffic_details: checkinTypeInput.value === 'regular' && hasTrafficInput.checked ? trafficDetailsInput.value.trim() : '',
-        comments: '',
+        comments: commentsInput.value.trim(),
       };
 
       if (!payload.callsign) {
@@ -1043,7 +1053,7 @@
     hasAnnouncementInput.addEventListener('change', refreshCheckinForm);
     hasTrafficInput.addEventListener('change', refreshCheckinForm);
 
-    [firstNameInput, lastNameInput, locationInput, announcementDetailsInput, trafficDetailsInput].forEach((input) => {
+    [firstNameInput, lastNameInput, locationInput, announcementDetailsInput, trafficDetailsInput, commentsInput].forEach((input) => {
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
