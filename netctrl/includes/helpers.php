@@ -198,14 +198,20 @@ function netctrl_prepare_public_session_payload(array $session)
     return $prepared;
 }
 
-function netctrl_get_public_sessions_payload($closed_limit = 5)
+function netctrl_get_public_sessions_payload($closed_limit = 20, $page = 1)
 {
+    $closed_limit = min(50, max(1, (int) $closed_limit));
+    $total = netctrl_count_closed_sessions();
+    $pages = max(1, (int) ceil($total / $closed_limit));
+    $page = min($pages, max(1, (int) $page));
     $open_sessions = array_map('netctrl_prepare_public_session_payload', netctrl_get_sessions('open'));
-    $closed_sessions = array_map('netctrl_prepare_public_session_payload', netctrl_get_recent_closed_sessions((int) $closed_limit));
+    $closed_sessions = array_map('netctrl_prepare_public_session_payload', netctrl_get_recent_closed_sessions($closed_limit, ($page - 1) * $closed_limit));
 
     return array(
         'open_sessions' => $open_sessions,
         'closed_sessions' => $closed_sessions,
+        'pagination' => array('page' => $page, 'pages' => $pages, 'total' => $total, 'per_page' => $closed_limit),
         'generated_at' => current_time('mysql'),
     );
 }
+
