@@ -602,14 +602,15 @@ function netctrl_get_sessions($status = null)
     return $wpdb->get_results("SELECT * FROM {$table} ORDER BY started_at DESC", ARRAY_A);
 }
 
-function netctrl_get_recent_closed_sessions($limit = 5)
+function netctrl_get_recent_closed_sessions($limit = 5, $offset = 0)
 {
     global $wpdb;
     $table = netctrl_get_table('sessions');
-    $limit = max(1, (int) $limit);
+    $limit = min(50, max(1, (int) $limit));
+    $offset = max(0, (int) $offset);
 
     return $wpdb->get_results(
-        $wpdb->prepare("SELECT * FROM {$table} WHERE status = %s ORDER BY closed_at DESC, started_at DESC LIMIT %d", 'closed', $limit),
+        $wpdb->prepare("SELECT * FROM {$table} WHERE status = %s ORDER BY closed_at DESC, started_at DESC, id DESC LIMIT %d OFFSET %d", 'closed', $limit, $offset),
         ARRAY_A
     );
 }
@@ -725,4 +726,12 @@ function netctrl_get_entries($session_id)
         $wpdb->prepare("SELECT * FROM {$table} WHERE session_id = %d ORDER BY created_at ASC, id ASC", $session_id),
         ARRAY_A
     );
+}
+
+
+function netctrl_count_closed_sessions()
+{
+    global $wpdb;
+    $table = netctrl_get_table('sessions');
+    return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE status = %s", 'closed'));
 }

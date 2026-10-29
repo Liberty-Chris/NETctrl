@@ -2,7 +2,7 @@
 /**
  * Plugin Name: NETctrl
  * Description: Amateur radio net control logging from KF4DBX/JCARA
- * Version: 0.9.0-beta.2
+ * Version: 0.9.0-beta.3
  * Author: Chris Hockaday - KF4DBX
  * Text Domain: NETctrl
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('NETCTRL_VERSION', '0.9.0-beta.2');
+define('NETCTRL_VERSION', '0.9.0-beta.3');
 
 define('NETCTRL_PATH', plugin_dir_path(__FILE__));
 define('NETCTRL_URL', plugin_dir_url(__FILE__));
@@ -43,3 +43,4 @@ function netctrl_deactivate_plugin()
 {
     netctrl_remove_capabilities();
 }
+

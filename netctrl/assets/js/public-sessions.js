@@ -136,6 +136,24 @@
       }
       lastSignature = signature;
 
+      const pagination = payload.pagination;
+      const navigation = root.querySelector('.netctrl-library-pagination');
+      if (pagination && navigation) {
+        root.dataset.closedPage = String(pagination.page);
+        const link = (page, label) => {
+          const a = document.createElement('a');
+          const url = new URL(window.location.href);
+          url.searchParams.set('netctrl_page', page);
+          a.href = url.toString(); a.textContent = label;
+          return a;
+        };
+        navigation.replaceChildren();
+        if (pagination.page > 1) navigation.append(link(pagination.page - 1, 'Newer sessions'));
+        const label = document.createElement('span');
+        label.textContent = `Page ${pagination.page} of ${pagination.pages} · ${pagination.total} closed sessions`;
+        navigation.append(label);
+        if (pagination.page < pagination.pages) navigation.append(link(pagination.page + 1, 'Older sessions'));
+      }
       openContainer.innerHTML = (payload.open_sessions || []).length
         ? payload.open_sessions.map((session) => renderCard(session, expandedIds.has(String(session.id)))).join('')
         : `<p class="netctrl-public-empty">${escapeHtml(strings.noOpenSessions)}</p>`;
@@ -147,7 +165,7 @@
 
     const poll = async () => {
       try {
-        const payload = await fetchPayload({ action: 'netctrl_public_sessions' });
+        const payload = await fetchPayload({ action: 'netctrl_public_sessions', netctrl_page: root.dataset.closedPage || 1 });
         render(payload);
       } catch (error) {
         // Keep the existing DOM if polling fails.
@@ -232,3 +250,4 @@
   document.querySelectorAll('[data-netctrl-public-sessions]').forEach(initPublicSessions);
   document.querySelectorAll('[data-netctrl-public-log]').forEach(initPublicLog);
 })();
+

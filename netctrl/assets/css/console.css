@@ -812,3 +812,6 @@
     grid-column: auto;
   }
 }
+
+
+.netctrl-library-pagination{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin:16px 0}.netctrl-library-pagination a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid currentColor;border-radius:8px}

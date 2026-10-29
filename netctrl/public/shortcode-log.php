@@ -56,7 +56,7 @@ function netctrl_enqueue_public_assets()
 
 function netctrl_ajax_public_sessions()
 {
-    wp_send_json_success(netctrl_get_public_sessions_payload(5));
+    wp_send_json_success(netctrl_get_public_sessions_payload(20, netctrl_public_library_page()));
 }
 
 function netctrl_ajax_public_session()
@@ -108,11 +108,11 @@ function netctrl_render_log_shortcode($atts)
 function netctrl_render_public_sessions_shortcode()
 {
     netctrl_enqueue_public_assets();
-    $payload = netctrl_get_public_sessions_payload(5);
+    $payload = netctrl_get_public_sessions_payload(20, netctrl_public_library_page());
 
     ob_start();
     ?>
-    <div class="netctrl-public-sessions" data-netctrl-public-sessions>
+    <div class="netctrl-public-sessions" data-netctrl-public-sessions data-closed-page="<?php echo esc_attr($payload['pagination']['page']); ?>">
         <div class="netctrl-public-sessions__grid">
             <section class="netctrl-panel netctrl-public-section">
                 <div class="netctrl-panel__heading">
@@ -135,9 +135,10 @@ function netctrl_render_public_sessions_shortcode()
 
             <section class="netctrl-panel netctrl-public-section">
                 <div class="netctrl-panel__heading">
-                    <h2><?php esc_html_e('Recent Closed Sessions', 'netctrl'); ?></h2>
+                    <h2><?php esc_html_e('Session Library', 'netctrl'); ?></h2>
                     <span class="netctrl-status-badge netctrl-status-badge--closed"><?php esc_html_e('Closed', 'netctrl'); ?></span>
                 </div>
+                <?php netctrl_render_library_navigation($payload['pagination']); ?>
                 <div data-netctrl-closed-sessions>
                     <?php
                     if ($payload['closed_sessions']) {
@@ -549,4 +550,26 @@ function netctrl_render_public_session_card(array $session, $single = false)
         </div>
     </article>
     <?php
+}
+
+
+function netctrl_public_library_page()
+{
+    $value = $_GET['netctrl_page'] ?? 1;
+    return is_scalar($value) ? max(1, absint(wp_unslash($value))) : 1;
+}
+
+function netctrl_render_library_navigation(array $pagination)
+{
+    $page = $pagination['page'];
+    $pages = $pagination['pages'];
+    echo '<nav class="netctrl-library-pagination" aria-label="Session library pages">';
+    if ($page > 1) {
+        echo '<a href="' . esc_url(add_query_arg('netctrl_page', $page - 1)) . '">' . esc_html__('Newer sessions', 'netctrl') . '</a> ';
+    }
+    echo '<span>' . esc_html(sprintf(__('Page %1$d of %2$d · %3$d closed sessions', 'netctrl'), $page, $pages, $pagination['total'])) . '</span>';
+    if ($page < $pages) {
+        echo ' <a href="' . esc_url(add_query_arg('netctrl_page', $page + 1)) . '">' . esc_html__('Older sessions', 'netctrl') . '</a>';
+    }
+    echo '</nav>';
 }
